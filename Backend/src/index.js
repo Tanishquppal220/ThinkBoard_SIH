@@ -10,9 +10,12 @@ import userRoutes from "./routes/userRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import {app,server} from "./config/socket.js";
 
+import path from 'path';
+
 
 dotenv.config();
-const PORT = process.env.PORT || 5001
+const PORT = process.env.PORT || 5001;
+const __dirname = path.resolve();
 
 app.use(express.json());
 app.use(cookieParser())
@@ -27,6 +30,12 @@ app.use('/api/notes',notesRoutes);
 app.use('/api/auth',authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/message',messageRoutes);
+if (process.env.Node_ENV === "production"){
+    app.use(express.static(path.join(__dirname, "../frontend/dist")));
+    app.get("*",(req,res)=>{
+        res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"))
+    })
+}
 connectDB().then(()=>{
     server.listen(PORT,()=>{
     console.log(`Server activated on port ${PORT}`);
