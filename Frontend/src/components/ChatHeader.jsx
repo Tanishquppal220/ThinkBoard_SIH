@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from "uuid";
 const ChatHeader = () => {
   const { selectedUser, setSelectedUser } = userChatStore();
   const { userData } = useContext(AppContent);
-  const { socket } = useSocketStore();
+  const { socket, onlineUsers } = useSocketStore();
   const navigate = useNavigate();
 
   const startCall = (type) =>{
@@ -60,6 +60,7 @@ const ChatHeader = () => {
                   : "U"}
               </div>
             )}
+
           </div>
 
           {/* User info */}
@@ -67,6 +68,9 @@ const ChatHeader = () => {
             <h3 className="font-medium text-base-content">
               {selectedUser.fullName || selectedUser.name}
             </h3>
+            <p className="text-xs text-base-content/70">
+              {onlineUsers.includes(selectedUser._id)? "online": "offline"}
+            </p>
           </div>
         </div>
 

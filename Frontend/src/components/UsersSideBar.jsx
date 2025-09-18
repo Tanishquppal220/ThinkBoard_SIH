@@ -1,9 +1,11 @@
 import { useEffect } from "react";
 import { MessageCircle, MoreVertical, Users, Search } from "lucide-react";
 import { userChatStore } from "../store/userChatStore.js";
+import { useSocketStore } from "../store/useSocketStore.js";
 
 const UsersSideBar = () => {
   const { getUsers, users, selectedUser, setSelectedUser } = userChatStore();
+  const { onlineUsers } = useSocketStore();
 
   useEffect(() => {
     getUsers();
@@ -60,20 +62,30 @@ const UsersSideBar = () => {
             `}
           >
             {/* Avatar */}
-            <div className="flex-shrink-0">
+            <div className="relative flex-shrink-0">
               {user.profilePic ? (
-                <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center ring-2 ring-base-300/50">
+                <div className="relative w-12 h-12 rounded-full overflow-hidden flex items-center justify-center ring-2 ring-base-300/50">
                   <img
                     src={user.profilePic}
                     alt={user.name}
                     className="object-cover w-full h-full"
                   />
                 </div>
+                
               ) : (
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center text-lg font-semibold text-primary border-2 border-primary/20">
                   {user.name ? user.name[0].toUpperCase() : "U"}
                 </div>
-              )}
+              )
+              
+              }
+               {onlineUsers.includes(user._id) && (
+        <span
+          className="absolute top-0 right-0 size-3 bg-green-500 
+          rounded-full ring-2 ring-zinc-900"
+        />
+      )}
+              
             </div>
 
             {/* User Info */}
@@ -87,9 +99,9 @@ const UsersSideBar = () => {
             </div>
 
             {/* Status Indicator */}
-            <div className="flex-shrink-0">
+            {/* <div className="flex-shrink-0">
               <div className="w-3 h-3 rounded-full bg-success/60"></div>
-            </div>
+            </div> */}
           </button>
         ))}
 
