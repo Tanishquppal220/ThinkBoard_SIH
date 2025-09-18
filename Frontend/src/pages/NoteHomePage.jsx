@@ -16,7 +16,7 @@ const NoteHomePage = () => {
     const fetchNotes = async () => {
       try {
         const res = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/notes`,
+          `http://localhost:5001/api/notes`,
           { withCredentials: true }   // ✅ send cookie with token
         )
 
