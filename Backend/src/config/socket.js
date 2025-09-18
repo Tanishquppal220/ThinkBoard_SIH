@@ -2,11 +2,16 @@
 import { Server } from 'socket.io';
 
 const userSocketMap = {};
+let io; // Declare io at module level
+
+export function getReceiverSocketId(userId) {
+  return userSocketMap[userId];
+}
 
 export function initSocket(server) {
-  const io = new Server(server, {
+  io = new Server(server, {
     cors: {
-      origin: ["http://localhost:5173"], // Update this in production
+      origin: ["http://localhost:5173"],
       credentials: true,
     },
   });
@@ -94,3 +99,5 @@ export function initSocket(server) {
     console.error("🔥 Socket connect error:", err.message);
   });
 }
+
+export { io };
