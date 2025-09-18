@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
             lat: {type: Number, default: null},
             lng: {type: Number, default: null},
         },
-        default: {lat: null, lng: null}
+        // default: {lat: null, lng: null}
     }
 
 });

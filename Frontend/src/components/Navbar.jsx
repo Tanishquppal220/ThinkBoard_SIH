@@ -107,7 +107,7 @@ const logout = async ()=>{
   const isNotePage = location.pathname === '/note';
 
   return (
-    <header className='bg-base-300 border-b border-base-content/10 mb-11 fixed top-0 left-0 w-full z-50'>
+    <header className='bg-base-300 border-b border-base-content/10 mb-11 fixed top-0 left-0 w-full z-[1000]'>
       <div className='p-4 mx-auto max-w-6xl flex items-center justify-between'>
           <Link to='/' className='text-3xl font-bold text-primary tracking-tight'>ThinkBoard</Link>
         <div className='flex items-center gap-4'>

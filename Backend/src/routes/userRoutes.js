@@ -7,6 +7,6 @@ const userRoutes = express.Router();
 
 userRoutes.get('/data',userAuth,getUserData);
 userRoutes.put("/update-profile-pic",userAuth, upload.single("profilePic"), updateProfilePic);
-userRoutes.get('/locations',getAllUserLocations);
+userRoutes.get('/locations', userAuth ,getAllUserLocations);
 
 export default userRoutes;

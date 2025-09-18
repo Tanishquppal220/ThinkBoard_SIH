@@ -9,7 +9,7 @@ export const AppContent = createContext();
 
 export const AppContextProvider = (props) => {
   axios.defaults.withCredentials = true;
-  const backendUrl = import.meta.env.MODE === "development"? "http://localhost:5001":'/';
+  const backendUrl = import.meta.env.MODE === "development"? "http://localhost:5001":'';
   const [isLoggedin, setIsLoggedin] = useState(false);
   const [userData, setUserData] = useState(null);
   const {setIncomingCall} = useCallStore();

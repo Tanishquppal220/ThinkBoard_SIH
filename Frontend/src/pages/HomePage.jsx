@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { PenTool, MessageCircle, Plus, Users, FileText, Music, Loader2 } from 'lucide-react'
+import { PenTool, MessageCircle, Plus, Users, FileText, Music, Loader2, MapPin, LocateFixed, Navigation } from 'lucide-react'
 import { Link } from 'react-router'
 import Navbar from '../components/Navbar'
 
 const HomePage = () => {
   const [isLoading, setIsLoading] = useState(true)
-  const [cardLoading, setCardLoading] = useState({ notes: false, chat: false })
+  const [cardLoading, setCardLoading] = useState({ notes: false, chat: false, location: false })
 
   useEffect(() => {
     // Simulate page loading
@@ -176,6 +176,49 @@ const HomePage = () => {
                 
                 <div className="absolute top-4 right-4 opacity-20 group-hover:opacity-40 transition-opacity duration-300">
                   <Users className="w-12 h-12 text-secondary" strokeWidth={1} />
+                </div>
+              </div>
+            </div>
+          </Link>
+          {/* Location Card */}
+          <Link 
+            to="/location" 
+            onClick={() => handleCardClick('location')}
+            className="block animate-slideUp"
+            style={{ animationDelay: '0.2s' }}
+          >
+            <div className="card bg-base-200 shadow-xl hover:shadow-2xl transform hover:-translate-y-2 transition-all duration-300 group border border-base-300 hover:border-primary/50 cursor-pointer h-full">
+              <div className="card-body p-8 relative overflow-hidden">
+                {cardLoading.notes && (
+                  <div className="absolute inset-0 bg-base-200/80 backdrop-blur-sm flex items-center justify-center z-10">
+                    <div className="text-center">
+                      <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-2" />
+                      <p className="text-sm opacity-60">Loading location...</p>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
+                  <Navigation className="w-8 h-8 text-primary group-hover:scale-110 transition-transform duration-300" />
+                </div>
+                
+                <h3 className="card-title text-2xl justify-center mb-4 group-hover:text-primary transition-colors duration-300">
+                  Locate Friends
+                </h3>
+                
+                <p className="text-center opacity-80 mb-6 leading-relaxed">
+                  Feeling lonely? Easily locate your friends and see where they are in real-time. Perfect for staying connected, planning meetups, or just knowing your circle is close by
+                </p>
+                
+                <div className="card-actions justify-center">
+                  <div className="btn btn-primary btn-wide group-hover:btn-outline group-hover:scale-105 transition-all duration-300">
+                    <LocateFixed className="w-5 h-5 mr-2" />
+                    Start Locating
+                  </div>
+                </div>
+                
+                <div className="absolute top-4 right-4 opacity-20 group-hover:opacity-40 transition-opacity duration-300">
+                  <FileText className="w-12 h-12 text-primary" strokeWidth={1} />
                 </div>
               </div>
             </div>

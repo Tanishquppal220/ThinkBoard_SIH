@@ -10,20 +10,6 @@ export const useSocketStore = create((set,get)=>({
     socket: null,
     onlineUsers : [],
 
-    // connectSocket: (userId) =>{
-    //     if(!userId || get().socket?.connected) return;
-    //     const socket = io(BASE_URL,{
-    //         query: { userId }
-    //     });
-
-    //     socket.connect();
-
-    //     set({ socket: socket });
-
-    //     socket.on("getOnlineUsers",(userIds)=>{
-    //         set({ onlineUsers: userIds });
-    //     });
-    // },
     connectSocket: (userId) => {
   if (!userId) {
     console.log("⚠️ No userId provided to connectSocket");
