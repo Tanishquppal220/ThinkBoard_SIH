@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build":"npm install --prefix Backend && npm install --prefix Frontend && npm run build --prefix Frontend ",
-    "start":"npm run start --prefix Backend"
+    "build": "npm install --prefix Backend && npm install --prefix Frontend && npm run build --prefix Frontend ",
+    "start": "npm run start --prefix Backend"
   },
   "repository": {
     "type": "git",
@@ -18,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/Abhishe295/ThinkBoard/issues"
   },
-  "homepage": "https://github.com/Abhishe295/ThinkBoard#readme"
+  "homepage": "https://github.com/Abhishe295/ThinkBoard#readme",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
 }
