@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import NoteCard from '../components/NoteCard'
 import NotesNotFound from '../components/NotesNotFound'
 import { LoaderIcon } from 'lucide-react'
+import api from '../lib/axios'
 
 const NoteHomePage = () => {
   const [isRateLimited, setIsRateLimited] = useState(false)
@@ -15,10 +16,7 @@ const NoteHomePage = () => {
   useEffect(() => {
     const fetchNotes = async () => {
       try {
-        const res = await axios.get(
-          `http://localhost:5001/api/notes`,
-          { withCredentials: true }   // ✅ send cookie with token
-        )
+        const res = await api.get('/api/notes')
 
         if (res.data.success) {
           setNotes(res.data.notes)    // ✅ expect {success, notes: [...]}
