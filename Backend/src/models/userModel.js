@@ -14,9 +14,17 @@ const userSchema = new mongoose.Schema({
         type: {
             lat: {type: Number, default: null},
             lng: {type: Number, default: null},
-        },
-        // default: {lat: null, lng: null}
-    }
+        }
+    },
+      emotionHistory: [
+  {
+    emotion: String,
+    source: String, 
+    phq9_score: { type: Number, default: null },
+    gad7_score: { type: Number, default: null },
+    timestamp: { type: Date, default: Date.now }
+  }
+]
 
 });
 

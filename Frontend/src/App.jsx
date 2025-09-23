@@ -14,6 +14,7 @@ import HomePage from './pages/HomePage';
 import CallPage from './pages/CallPage';
 import IncomingCall from './components/IncomingCall';
 import LocationPage from './pages/LocationPage';
+import EmotionDetectPage from './pages/EmotionDetectPage';
 
 
 const App = () => {
@@ -37,6 +38,7 @@ const App = () => {
         <Route path = '/chat' element= {<ChatHomePage/>}/>
         <Route path = '/call/:callId' element= {<CallPage/>}/>
         <Route path = '/location' element = {<LocationPage/>}/>
+        <Route path = '/detect-emotion' element= {<EmotionDetectPage/>}/>
         
         
 

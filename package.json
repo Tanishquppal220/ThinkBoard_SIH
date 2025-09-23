@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/Abhishe295/ThinkBoard#readme",
   "dependencies": {
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "fluent-ffmpeg": "^2.1.3"
   }
 }

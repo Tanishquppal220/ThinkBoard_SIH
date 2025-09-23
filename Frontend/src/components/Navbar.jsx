@@ -71,7 +71,7 @@ const handleUpload = async (e) => {
     });
 
     if (res.data.success) {
-      setImageUrl(res.data.userData.profilePic); // Cloudinary URL
+      setImageUrl(res.data.profilePic); // Cloudinary URL
     }
     } catch (error) {
         console.error("Error uploading file:", error);

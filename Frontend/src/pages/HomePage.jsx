@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { PenTool, MessageCircle, Plus, Users, FileText, Music, Loader2, MapPin, LocateFixed, Navigation } from 'lucide-react'
+import { PenTool, MessageCircle, Plus, Users, FileText, Music, Loader2, MapPin, LocateFixed, Navigation, Smile, Activity, Frown, Meh, Brain, ScanFace, Scan, Heart, Sparkle, Globe } from 'lucide-react'
 import { Link } from 'react-router'
 import Navbar from '../components/Navbar'
 
 const HomePage = () => {
   const [isLoading, setIsLoading] = useState(true)
-  const [cardLoading, setCardLoading] = useState({ notes: false, chat: false, location: false })
+  const [cardLoading, setCardLoading] = useState({ notes: false, chat: false, location: false,emotion: false })
 
   useEffect(() => {
     // Simulate page loading
@@ -218,7 +218,50 @@ const HomePage = () => {
                 </div>
                 
                 <div className="absolute top-4 right-4 opacity-20 group-hover:opacity-40 transition-opacity duration-300">
-                  <FileText className="w-12 h-12 text-primary" strokeWidth={1} />
+                  <Globe className="w-12 h-12 text-primary" strokeWidth={1} />
+                </div>
+              </div>
+            </div>
+          </Link>
+          {/* Emotion Detection Card */}
+          <Link 
+            to="/detect-emotion" 
+            onClick={() => handleCardClick('emotion')}
+            className="block animate-slideUp"
+            style={{ animationDelay: '0.2s' }}
+          >
+            <div className="card bg-base-200 shadow-xl hover:shadow-2xl transform hover:-translate-y-2 transition-all duration-300 group border border-base-300 hover:border-accent/50 cursor-pointer h-full">
+              <div className="card-body p-8 relative overflow-hidden">
+                {cardLoading.notes && (
+                  <div className="absolute inset-0 bg-base-200/80 backdrop-blur-sm flex items-center justify-center z-10">
+                    <div className="text-center">
+                      <Loader2 className="w-8 h-8 text-accent animate-spin mx-auto mb-2" />
+                      <p className="text-sm opacity-60">Loading emotions...</p>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full bg-accent/10 group-hover:bg-accent/20 transition-colors duration-300">
+                  <ScanFace className="w-8 h-8 text-accent group-hover:scale-110 transition-transform duration-300" />
+                </div>
+                
+                <h3 className="card-title text-2xl justify-center mb-4 group-hover:text-accent transition-colors duration-300">
+                  Detect Emotion
+                </h3>
+                
+                <p className="text-center opacity-80 mb-6 leading-relaxed">
+                  Curious about your mood? Instantly detect emotions from your voice or expressions. Great for self-reflection, mood tracking, or integrating with AI-driven experiences.
+                </p>
+                
+                <div className="card-actions justify-center">
+                  <div className="btn btn-accent btn-wide group-hover:btn-outline group-hover:scale-105 transition-all duration-300">
+                    <Activity className="w-5 h-5 mr-2 text-accent" />
+                    Analyze Emotion
+                  </div>
+                </div>
+                
+                <div className="absolute top-4 right-4 opacity-20 group-hover:opacity-40 transition-opacity duration-300">
+                  <Sparkle className="w-12 h-12 text-accent"  />
                 </div>
               </div>
             </div>
@@ -270,7 +313,7 @@ const HomePage = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style >{`
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
