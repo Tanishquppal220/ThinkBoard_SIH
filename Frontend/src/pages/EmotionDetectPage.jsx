@@ -78,7 +78,8 @@ const EmotionDetectPage = () => {
   const [loading, setLoading] = useState(false);
   const [activeMethod, setActiveMethod] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
+  const [historyData, setHistoryData] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const { userData, backendUrl } = useContext(AppContent);
 
   // recording refs
@@ -92,6 +93,33 @@ const EmotionDetectPage = () => {
 
   const phq9Total = phq9.reduce((a, b) => a + b, 0);
   const gad7Total = gad7.reduce((a, b) => a + b, 0);
+
+  // Load emotion history automatically when page loads
+  React.useEffect(() => {
+    if (userData && userData._id) {
+      fetchEmotionHistory();
+    }
+  }, [userData]);
+
+  // Fetch Emotion History
+  const fetchEmotionHistory = async () => {
+    if (!userData || !userData._id) return;
+
+    setHistoryLoading(true);
+    try {
+      const res = await axios.get(`${backendUrl}/api/emotion/history/${userData._id}`);
+      const data = res.data;
+      console.log("Fetched emotion history:", data);
+
+      if (!data.message) {
+        setHistoryData(data);
+      }
+    } catch (error) {
+      console.error("Error fetching emotion history:", error.message);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   // -------------------------
   // Camera Detection
@@ -113,6 +141,8 @@ const EmotionDetectPage = () => {
         { headers: { "Content-Type": "application/json" } }
       );
       setResult(res.data);
+      // Refresh history after new emotion is recorded
+      fetchEmotionHistory();
     } catch (error) {
       console.error("Camera detection error:", error);
       setResult({ error: "Camera detection failed. Please try again." });
@@ -158,6 +188,8 @@ const EmotionDetectPage = () => {
             headers: { "Content-Type": "multipart/form-data" }
           });
           setResult(res.data);
+          // Refresh history after new emotion is recorded
+          fetchEmotionHistory();
         } catch (error) {
           console.error("Voice detection error:", error);
           setResult({ error: "Voice detection failed. Please try again." });
@@ -207,6 +239,8 @@ const EmotionDetectPage = () => {
       });
 
       setResult(res.data);
+      // Refresh history after new emotion is recorded
+      fetchEmotionHistory();
     } catch (error) {
       console.error("Form detection error:", error);
       setResult({ error: "Form submission failed. Please try again." });
@@ -216,42 +250,30 @@ const EmotionDetectPage = () => {
     }
   };
 
-  // -------------------------
-  // Fetch Emotion History
-  // -------------------------
-  const fetchEmotionHistory = async () => {
-    if (!userData || !userData._id) {
-      setResult({ error: "Please log in first." });
-      return;
-    }
-
-    setLoading(true);
-    setActiveMethod('history');
-    try {
-      const res = await axios.get(`${backendUrl}/api/emotion/history/${userData._id}`);
-      const data = res.data;
-
-      if (data.message) {
-        setResult({ error: data.message });
-      } else {
-        setResult(data);
-        setShowHistory(true);
-      }
-    } catch (error) {
-      console.error("Error fetching emotion history:", error.message);
-      setResult({ error: "Failed to fetch emotion history" });
-    } finally {
-      setLoading(false);
-      setActiveMethod(null);
-    }
-  };
-
+  // Helper functions
   const getWeekdayMap = (dailySummary) => {
     const weekdayMap = {};
-    Object.entries(dailySummary).forEach(([dateStr, emotion]) => {
-      const day = new Date(dateStr).toLocaleDateString("en-US", { weekday: "long" });
-      weekdayMap[day] = emotion;
-    });
+    const today = new Date();
+    
+    // Get the last 7 days to ensure we show recent data
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      const dayName = date.toLocaleDateString("en-US", { weekday: "long" });
+      
+      // Check if we have data for this date
+      if (dailySummary[dateStr]) {
+        weekdayMap[dayName] = dailySummary[dateStr];
+      } else {
+        // Check alternative date formats that might be in the data
+        const altDateStr1 = date.toLocaleDateString("en-US"); // M/D/YYYY
+        const altDateStr2 = date.toLocaleDateString("en-CA"); // YYYY-MM-DD
+        
+        weekdayMap[dayName] = dailySummary[altDateStr1] || dailySummary[altDateStr2] || null;
+      }
+    }
+    
     return weekdayMap;
   };
 
@@ -261,23 +283,151 @@ const EmotionDetectPage = () => {
     return summaryObj[latestKey];
   };
 
-  // Generate mock chart data for demonstration
+  // Get the most recent emotion from daily summary
+  const getMostRecentEmotion = (dailySummary) => {
+    if (!dailySummary || Object.keys(dailySummary).length === 0) return null;
+    
+    const sortedDates = Object.keys(dailySummary).sort((a, b) => new Date(b) - new Date(a));
+    return dailySummary[sortedDates[0]];
+  };
+
+  // Get suggestions based on current emotion
+  const getEmotionSuggestions = (emotion) => {
+    if (!emotion) return null;
+    
+    const normalizedEmotion = emotion.toLowerCase();
+    
+    const suggestions = {
+      happy: {
+        title: "Keep the Positivity Flowing! 😊",
+        color: "from-green-100 to-emerald-100",
+        items: [
+          { icon: "🎵", title: "Music", desc: "Create or share your happy playlist with friends" },
+          { icon: "📝", title: "Gratitude Journal", desc: "Write down 3 things you're grateful for today" },
+          { icon: "🌟", title: "Spread Joy", desc: "Join group activities or chat with other positive users" },
+          { icon: "📞", title: "Connect", desc: "Share your good mood with friends and family" }
+        ]
+      },
+      joy: {
+        title: "Keep the Positivity Flowing! 😊",
+        color: "from-green-100 to-emerald-100",
+        items: [
+          { icon: "🎵", title: "Music", desc: "Create or share your happy playlist with friends" },
+          { icon: "📝", title: "Gratitude Journal", desc: "Write down 3 things you're grateful for today" },
+          { icon: "🌟", title: "Spread Joy", desc: "Join group activities or chat with other positive users" },
+          { icon: "📞", title: "Connect", desc: "Share your good mood with friends and family" }
+        ]
+      },
+      excited: {
+        title: "Keep the Positivity Flowing! 😊",
+        color: "from-green-100 to-emerald-100",
+        items: [
+          { icon: "🎵", title: "Music", desc: "Create or share your happy playlist with friends" },
+          { icon: "📝", title: "Gratitude Journal", desc: "Write down 3 things you're grateful for today" },
+          { icon: "🌟", title: "Spread Joy", desc: "Join group activities or chat with other positive users" },
+          { icon: "📞", title: "Connect", desc: "Share your good mood with friends and family" }
+        ]
+      },
+      sad: {
+        title: "Let's Help You Feel Better 💙",
+        color: "from-blue-100 to-cyan-100",
+        items: [
+          { icon: "🎵", title: "Calming Music", desc: "Try soft, lo-fi, or gently uplifting playlists" },
+          { icon: "🫁", title: "Breathing Exercise", desc: "Take 2-3 minutes for guided breathing or mindfulness" },
+          { icon: "📝", title: "Emotion Journal", desc: "Write down your feelings to process and release them" },
+          { icon: "📞", title: "Reach Out", desc: "Connect with a trusted friend or family member" },
+          { icon: "🗺️", title: "Find Peace", desc: "Visit nearby parks, cafes, or calming spaces" }
+        ]
+      },
+      angry: {
+        title: "Channel Your Energy Safely 🔴",
+        color: "from-red-100 to-rose-100",
+        items: [
+          { icon: "🎵", title: "Release Music", desc: "Try energetic workout beats or calming instrumentals" },
+          { icon: "🫁", title: "Box Breathing", desc: "Use breathing techniques to cool down anger" },
+          { icon: "📝", title: "Anger Journal", desc: "Write what triggered you, then reframe it constructively" },
+          { icon: "⚡", title: "Physical Release", desc: "Consider a walk, workout, or physical activity" },
+          { icon: "🤔", title: "Pause & Reflect", desc: "Take time to cool down before reaching out to others" }
+        ]
+      },
+      frustrated: {
+        title: "Channel Your Energy Safely 🔴",
+        color: "from-red-100 to-rose-100",
+        items: [
+          { icon: "🎵", title: "Release Music", desc: "Try energetic workout beats or calming instrumentals" },
+          { icon: "🫁", title: "Box Breathing", desc: "Use breathing techniques to cool down anger" },
+          { icon: "📝", title: "Anger Journal", desc: "Write what triggered you, then reframe it constructively" },
+          { icon: "⚡", title: "Physical Release", desc: "Consider a walk, workout, or physical activity" },
+          { icon: "🤔", title: "Pause & Reflect", desc: "Take time to cool down before reaching out to others" }
+        ]
+      },
+      neutral: {
+        title: "Turn Stability into Productivity ⚪",
+        color: "from-gray-100 to-slate-100",
+        items: [
+          { icon: "🎵", title: "Focus Music", desc: "Try ambient, jazz, or background music for productivity" },
+          { icon: "📝", title: "Plan Your Day", desc: "Set small, achievable goals for today" },
+          { icon: "🗺️", title: "Connect Locally", desc: "Find co-working spaces or study groups nearby" },
+          { icon: "📞", title: "Casual Connection", desc: "Reach out to friends for light conversation" }
+        ]
+      },
+      anxious: {
+        title: "Find Your Calm 💙",
+        color: "from-blue-100 to-indigo-100",
+        items: [
+          { icon: "🫁", title: "Deep Breathing", desc: "Practice 4-7-8 breathing or guided meditation" },
+          { icon: "🎵", title: "Calming Sounds", desc: "Try nature sounds, soft music, or meditation tracks" },
+          { icon: "📝", title: "Worry Journal", desc: "Write down your concerns to externalize them" },
+          { icon: "🌱", title: "Grounding", desc: "Use 5-4-3-2-1 technique (5 things you see, 4 you hear, etc.)" },
+          { icon: "📞", title: "Support", desc: "Consider calling a trusted friend or counselor" }
+        ]
+      },
+      worried: {
+        title: "Find Your Calm 💙",
+        color: "from-blue-100 to-indigo-100",
+        items: [
+          { icon: "🫁", title: "Deep Breathing", desc: "Practice 4-7-8 breathing or guided meditation" },
+          { icon: "🎵", title: "Calming Sounds", desc: "Try nature sounds, soft music, or meditation tracks" },
+          { icon: "📝", title: "Worry Journal", desc: "Write down your concerns to externalize them" },
+          { icon: "🌱", title: "Grounding", desc: "Use 5-4-3-2-1 technique (5 things you see, 4 you hear, etc.)" },
+          { icon: "📞", title: "Support", desc: "Consider calling a trusted friend or counselor" }
+        ]
+      }
+    };
+
+    return suggestions[normalizedEmotion] || suggestions.neutral;
+  };
+
+  // Generate chart data with better date handling
   const generateChartData = (dailySummary) => {
     const chartData = [];
-    const dates = Object.keys(dailySummary).sort().slice(-12); // Last 12 days
+    const today = new Date();
     
-    dates.forEach((date, index) => {
-      const emotion = dailySummary[date];
-      const isPositive = ['happy', 'joy', 'excited', 'content', 'calm'].includes(emotion?.toLowerCase());
-      const isNegative = ['sad', 'angry', 'frustrated', 'anxious', 'worried', 'depressed'].includes(emotion?.toLowerCase());
+    // Get the last 12 days of data
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      // Check multiple date formats for the emotion data
+      let emotion = dailySummary[dateStr];
+      if (!emotion) {
+        const altDateStr1 = date.toLocaleDateString("en-US"); // M/D/YYYY
+        const altDateStr2 = date.toLocaleDateString("en-CA"); // YYYY-MM-DD
+        emotion = dailySummary[altDateStr1] || dailySummary[altDateStr2];
+      }
+      
+      const isPositive = emotion && ['happy', 'joy', 'excited', 'content', 'calm'].includes(emotion.toLowerCase());
+      const isNegative = emotion && ['sad', 'angry', 'frustrated', 'anxious', 'worried', 'depressed'].includes(emotion.toLowerCase());
       
       chartData.push({
-        date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        positive: isPositive ? Math.random() * 80 + 20 : Math.random() * 30,
-        negative: isNegative ? Math.random() * 80 + 20 : Math.random() * 30,
-        emotion: emotion
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        positive: isPositive ? Math.random() * 60 + 40 : Math.random() * 20 + 10,
+        negative: isNegative ? Math.random() * 60 + 40 : Math.random() * 20 + 10,
+        emotion: emotion || null,
+        hasData: !!emotion
       });
-    });
+    }
     
     return chartData;
   };
@@ -330,14 +480,36 @@ const EmotionDetectPage = () => {
     return <span className={`badge ${colorClass} badge-sm`}>{severity}</span>;
   };
 
-  // Emotion History Dashboard Component
-  const EmotionDashboard = () => {
-    if (!result || !result.daily_summary) return null;
+  // Simple Emotion History Component (always visible)
+  const SimpleEmotionHistory = () => {
+    if (!historyData || !historyData.daily_summary) {
+      return (
+        <div className="space-y-6">
+          <div className="card bg-base-100 shadow-xl">
+            <div className="card-body text-center py-12">
+              <History className="w-16 h-16 text-base-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Emotion History</h3>
+              {historyLoading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Loading your emotion history...</span>
+                </div>
+              ) : (
+                <p className="text-base-content/70">
+                  No emotion history found. Start recording your emotions to see patterns and insights.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
 
-    const weekdayMap = getWeekdayMap(result.daily_summary);
-    const chartData = generateChartData(result.daily_summary);
-    const weeklyEmotion = result.weekly_summary ? getLatestEmotion(result.weekly_summary) : null;
-    const monthlyEmotion = result.monthly_summary ? getLatestEmotion(result.monthly_summary) : null;
+    const weekdayMap = getWeekdayMap(historyData.daily_summary);
+    const chartData = generateChartData(historyData.daily_summary);
+    const weeklyEmotion = historyData.weekly_summary ? getLatestEmotion(historyData.weekly_summary) : null;
+    const monthlyEmotion = historyData.monthly_summary ? getLatestEmotion(historyData.monthly_summary) : null;
+    const recentEmotion = getMostRecentEmotion(historyData.daily_summary);
 
     const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -370,6 +542,30 @@ const EmotionDetectPage = () => {
           </div>
         </div>
 
+        {/* Personalized Suggestions */}
+        {recentEmotion && (
+          <div className={`card bg-gradient-to-r ${getEmotionSuggestions(recentEmotion).color} shadow-xl`}>
+            <div className="card-body">
+              <h3 className="card-title text-xl mb-4 flex items-center gap-2">
+                <span className="text-2xl">{getEmotionEmoji(recentEmotion)}</span>
+                {getEmotionSuggestions(recentEmotion).title}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {getEmotionSuggestions(recentEmotion).items.map((item, index) => (
+                  <div key={index} className="flex items-start gap-3 p-3 bg-white/50 rounded-lg hover:bg-white/70 transition-colors cursor-pointer">
+                    <div className="text-2xl">{item.icon}</div>
+                    <div>
+                      <h4 className="font-semibold text-base-content">{item.title}</h4>
+                      <p className="text-sm text-base-content/70">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Freud Score Chart */}
         <div className="card bg-gradient-to-br from-pink-400 to-green-400 shadow-xl">
           <div className="card-body">
@@ -401,15 +597,19 @@ const EmotionDetectPage = () => {
                     <div className="flex flex-col items-center justify-end h-48 gap-1">
                       {/* Positive bar */}
                       <div 
-                        className="w-6 bg-green-500 rounded-t transition-all duration-500 hover:bg-green-600"
-                        style={{ height: `${data.positive}%` }}
-                        title={`Positive: ${Math.round(data.positive)}%`}
+                        className={`w-6 rounded-t transition-all duration-500 ${
+                          data.hasData ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-200'
+                        }`}
+                        style={{ height: `${data.hasData ? data.positive : 10}%` }}
+                        title={data.hasData ? `${data.emotion} - Positive: ${Math.round(data.positive)}%` : 'No data available'}
                       ></div>
                       {/* Negative bar */}
                       <div 
-                        className="w-6 bg-red-500 rounded-b transition-all duration-500 hover:bg-red-600"
-                        style={{ height: `${data.negative}%` }}
-                        title={`Negative: ${Math.round(data.negative)}%`}
+                        className={`w-6 rounded-b transition-all duration-500 ${
+                          data.hasData ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-200'
+                        }`}
+                        style={{ height: `${data.hasData ? data.negative : 10}%` }}
+                        title={data.hasData ? `${data.emotion} - Negative: ${Math.round(data.negative)}%` : 'No data available'}
                       ></div>
                     </div>
                     <span className="text-xs text-base-content/70 mt-2">{data.date}</span>
@@ -438,12 +638,20 @@ const EmotionDetectPage = () => {
               {weekdays.map((day) => {
                 const emotion = weekdayMap[day];
                 const emoji = getEmotionEmoji(emotion);
+                const hasData = emotion !== null && emotion !== undefined;
+                
                 return (
-                  <div key={day} className="flex flex-col items-center gap-2 p-3 rounded-lg bg-base-200 hover:bg-base-300 transition-colors">
-                    <div className="text-3xl mb-1">{emoji}</div>
+                  <div key={day} className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-colors ${
+                    hasData ? 'bg-base-200 hover:bg-base-300' : 'bg-base-100 border-2 border-dashed border-base-300'
+                  }`}>
+                    <div className={`text-3xl mb-1 ${!hasData ? 'opacity-30' : ''}`}>
+                      {hasData ? emoji : '😐'}
+                    </div>
                     <span className="text-xs font-medium text-base-content/70">{day.slice(0, 3)}</span>
-                    <span className="text-xs text-center capitalize px-2 py-1 rounded-full bg-base-100 text-base-content/80">
-                      {emotion || 'No data'}
+                    <span className={`text-xs text-center capitalize px-2 py-1 rounded-full text-base-content/80 ${
+                      hasData ? 'bg-base-100' : 'bg-base-200 text-base-content/50'
+                    }`}>
+                      {hasData ? emotion : 'No data'}
                     </span>
                   </div>
                 );
@@ -451,28 +659,6 @@ const EmotionDetectPage = () => {
             </div>
           </div>
         </div>
-
-        {/* AI Suggestions */}
-        {/* <div className="card bg-gradient-to-r from-purple-100 to-blue-100 shadow-xl">
-          <div className="card-body">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-                  <span className="text-2xl">🤖</span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">AI Suggestions</h3>
-                  <p className="text-sm text-base-content/70">Swipe for personalized recommendations</p>
-                </div>
-              </div>
-              <button className="btn btn-circle btn-outline">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 111.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div> */}
       </div>
     );
   };
@@ -486,255 +672,217 @@ const EmotionDetectPage = () => {
           <p className="text-base-content/70 text-lg">Choose your preferred method for emotion analysis</p>
         </div>
 
-        {/* Show Dashboard if history is loaded */}
-        {showHistory && result && result.daily_summary && !result.error ? (
-          <EmotionDashboard />
-        ) : (
-          <>
-            {/* Detection Methods */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-              {/* Camera Detection */}
-              <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300">
-                <div className="card-body text-center">
-                  <div className="mx-auto mb-4">
-                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                      <Camera className="w-8 h-8 text-primary" />
-                    </div>
-                  </div>
-                  <h2 className="card-title justify-center text-xl mb-2">Camera Detection</h2>
-                  <p className="text-base-content/70 mb-4">
-                    Analyze facial expressions in real-time
-                  </p>
-                  <div className="card-actions justify-center">
-                    <button
-                      onClick={handleCameraDetect}
-                      disabled={loading}
-                      className={`btn btn-primary ${loading && activeMethod === 'camera' ? 'loading' : ''}`}
-                    >
-                      {loading && activeMethod === 'camera' ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <Camera className="w-4 h-4 mr-2" />
-                      )}
-                      Start Detection
-                    </button>
-                  </div>
+        {/* Detection Methods */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+          {/* Camera Detection */}
+          <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="card-body text-center">
+              <div className="mx-auto mb-4">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Camera className="w-8 h-8 text-primary" />
                 </div>
               </div>
+              <h2 className="card-title justify-center text-xl mb-2">Camera Detection</h2>
+              <p className="text-base-content/70 mb-4">
+                Analyze facial expressions in real-time
+              </p>
+              <div className="card-actions justify-center">
+                <button
+                  onClick={handleCameraDetect}
+                  disabled={loading}
+                  className={`btn btn-primary ${loading && activeMethod === 'camera' ? 'loading' : ''}`}
+                >
+                  {loading && activeMethod === 'camera' ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Camera className="w-4 h-4 mr-2" />
+                  )}
+                  Start Detection
+                </button>
+              </div>
+            </div>
+          </div>
 
-              {/* Voice Detection */}
-              <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300">
-                <div className="card-body text-center">
-                  <div className="mx-auto mb-4">
-                    <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center">
-                      <Mic className="w-8 h-8 text-secondary" />
-                    </div>
-                  </div>
-                  <h2 className="card-title justify-center text-xl mb-2">Voice Analysis</h2>
-                  <p className="text-base-content/70 mb-4">
-                    Record 5 seconds of speech for analysis
-                  </p>
-                  <div className="card-actions justify-center">
-                    <button
-                      onClick={startRecording}
-                      disabled={loading || isRecording}
-                      className={`btn btn-secondary ${isRecording ? 'loading' : ''}`}
-                    >
-                      {isRecording ? (
-                        <>
-                          <Square className="w-4 h-4 mr-2" />
-                          Recording...
-                        </>
-                      ) : loading && activeMethod === 'voice' ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <>
-                          <Play className="w-4 h-4 mr-2" />
-                          Start Recording
-                        </>
-                      )}
-                    </button>
-                  </div>
+          {/* Voice Detection */}
+          <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="card-body text-center">
+              <div className="mx-auto mb-4">
+                <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center">
+                  <Mic className="w-8 h-8 text-secondary" />
                 </div>
               </div>
+              <h2 className="card-title justify-center text-xl mb-2">Voice Analysis</h2>
+              <p className="text-base-content/70 mb-4">
+                Record 5 seconds of speech for analysis
+              </p>
+              <div className="card-actions justify-center">
+                <button
+                  onClick={startRecording}
+                  disabled={loading || isRecording}
+                  className={`btn btn-secondary ${isRecording ? 'loading' : ''}`}
+                >
+                  {isRecording ? (
+                    <>
+                      <Square className="w-4 h-4 mr-2" />
+                      Recording...
+                    </>
+                  ) : loading && activeMethod === 'voice' ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <>
+                      <Play className="w-4 h-4 mr-2" />
+                      Start Recording
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
 
-              {/* Form Assessment */}
-              <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300">
-                <div className="card-body text-center">
-                  <div className="mx-auto mb-4">
-                    <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center">
-                      <FileText className="w-8 h-8 text-accent" />
-                    </div>
-                  </div>
-                  <h2 className="card-title justify-center text-xl mb-2">Clinical Assessment</h2>
-                  <p className="text-base-content/70 mb-4">
-                    PHQ-9 & GAD-7 standardized questionnaire
-                  </p>
-                  <div className="stats stats-horizontal shadow-sm mb-4">
-                    <div className="stat py-2">
-                      <div className="stat-title text-xs">PHQ-9</div>
-                      <div className="stat-value text-lg">{phq9Total}</div>
-                      <div className="stat-desc">{getSeverityBadge(phq9Total, 27, 'phq9')}</div>
-                    </div>
-                    <div className="stat py-2">
-                      <div className="stat-title text-xs">GAD-7</div>
-                      <div className="stat-value text-lg">{gad7Total}</div>
-                      <div className="stat-desc">{getSeverityBadge(gad7Total, 21, 'gad7')}</div>
-                    </div>
-                  </div>
+          {/* Form Assessment */}
+          <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300">
+            <div className="card-body text-center">
+              <div className="mx-auto mb-4">
+                <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center">
+                  <FileText className="w-8 h-8 text-accent" />
                 </div>
               </div>
-
-              {/* Emotion History */}
-              <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300">
-                <div className="card-body text-center">
-                  <div className="mx-auto mb-4">
-                    <div className="w-16 h-16 bg-info/10 rounded-full flex items-center justify-center">
-                      <History className="w-8 h-8 text-info" />
-                    </div>
-                  </div>
-                  <h2 className="card-title justify-center text-xl mb-2">Emotion History</h2>
-                  <p className="text-base-content/70 mb-4">
-                    View your mood patterns and trends
-                  </p>
-                  <div className="card-actions justify-center">
-                    <button
-                      onClick={fetchEmotionHistory}
-                      disabled={loading}
-                      className={`btn btn-info ${loading && activeMethod === 'history' ? 'loading' : ''}`}
-                    >
-                      {loading && activeMethod === 'history' ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <History className="w-4 h-4 mr-2" />
-                      )}
-                      View History
-                    </button>
-                  </div>
+              <h2 className="card-title justify-center text-xl mb-2">Clinical Assessment</h2>
+              <p className="text-base-content/70 mb-4">
+                PHQ-9 & GAD-7 standardized questionnaire
+              </p>
+              <div className="stats stats-horizontal shadow-sm mb-4">
+                <div className="stat py-2">
+                  <div className="stat-title text-xs">PHQ-9</div>
+                  <div className="stat-value text-lg">{phq9Total}</div>
+                  <div className="stat-desc">{getSeverityBadge(phq9Total, 27, 'phq9')}</div>
+                </div>
+                <div className="stat py-2">
+                  <div className="stat-title text-xs">GAD-7</div>
+                  <div className="stat-value text-lg">{gad7Total}</div>
+                  <div className="stat-desc">{getSeverityBadge(gad7Total, 21, 'gad7')}</div>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* PHQ-9 & GAD-7 Form */}
-            {!showHistory && (
-              <div className="card bg-base-100 shadow-xl mb-8">
-                <div className="card-body">
-                  <h2 className="card-title text-2xl mb-6 flex items-center">
-                    <FileText className="w-6 h-6 mr-2" />
-                    Clinical Assessment Form
-                  </h2>
+        {/* PHQ-9 & GAD-7 Form */}
+        <div className="card bg-base-100 shadow-xl mb-8">
+          <div className="card-body">
+            <h2 className="card-title text-2xl mb-6 flex items-center">
+              <FileText className="w-6 h-6 mr-2" />
+              Clinical Assessment Form
+            </h2>
 
-                  {/* PHQ-9 Section */}
-                  <div className="mb-8">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xl font-semibold">PHQ-9 Depression Scale</h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold">Total: {phq9Total}/27</span>
-                        {getSeverityBadge(phq9Total, 27, 'phq9')}
-                      </div>
-                    </div>
-                    <div className="bg-base-200 rounded-lg p-4">
-                      <div className="text-xs text-base-content/70 mb-4 text-center">
-                        Over the last 2 weeks, how often have you been bothered by any of the following problems?
-                      </div>
-                      <div className="hidden lg:flex justify-end gap-2 mb-2 text-xs font-medium text-base-content/70">
-                        <span className="w-12 text-center">Not at all</span>
-                        <span className="w-12 text-center">Several days</span>
-                        <span className="w-12 text-center">More than half</span>
-                        <span className="w-12 text-center">Nearly every day</span>
-                      </div>
-                      {PHQ9_ITEMS.map((q, i) => (
-                        <QuestionRow
-                          key={`phq9-${i}`}
-                          text={q}
-                          value={phq9[i]}
-                          onChange={(opt) => {
-                            const newArr = [...phq9];
-                            newArr[i] = opt;
-                            setPhq9(newArr);
-                          }}
-                          index={i}
-                          questionType="phq9"
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* GAD-7 Section */}
-                  <div className="mb-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-xl font-semibold">GAD-7 Anxiety Scale</h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold">Total: {gad7Total}/21</span>
-                        {getSeverityBadge(gad7Total, 21, 'gad7')}
-                      </div>
-                    </div>
-                    <div className="bg-base-200 rounded-lg p-4">
-                      <div className="text-xs text-base-content/70 mb-4 text-center">
-                        Over the last 2 weeks, how often have you been bothered by the following problems?
-                      </div>
-                      {GAD7_ITEMS.map((q, i) => (
-                        <QuestionRow
-                          key={`gad7-${i}`}
-                          text={q}
-                          value={gad7[i]}
-                          onChange={(opt) => {
-                            const newArr = [...gad7];
-                            newArr[i] = opt;
-                            setGad7(newArr);
-                          }}
-                          index={i}
-                          questionType="gad7"
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Difficulty Section */}
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-3">Functional Impairment</h3>
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text">
-                          If you checked off any problems, how difficult have these problems made it for you to do your work, take care of things at home, or get along with other people?
-                        </span>
-                      </label>
-                      <select
-                        value={difficulty}
-                        onChange={(e) => setDifficulty(e.target.value)}
-                        className="select select-bordered w-full"
-                      >
-                        {DIFFICULTY_OPTIONS.map((d, i) => (
-                          <option key={i} value={d}>{d}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Submit Button */}
-                  <div className="card-actions justify-center">
-                    <button
-                      onClick={handleFormDetect}
-                      disabled={loading}
-                      className={`btn btn-accent btn-lg ${loading && activeMethod === 'form' ? 'loading' : ''}`}
-                    >
-                      {loading && activeMethod === 'form' ? (
-                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      ) : (
-                        <FileText className="w-5 h-5 mr-2" />
-                      )}
-                      Submit Assessment
-                    </button>
-                  </div>
+            {/* PHQ-9 Section */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold">PHQ-9 Depression Scale</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold">Total: {phq9Total}/27</span>
+                  {getSeverityBadge(phq9Total, 27, 'phq9')}
                 </div>
               </div>
-            )}
-          </>
-        )}
+              <div className="bg-base-200 rounded-lg p-4">
+                <div className="text-xs text-base-content/70 mb-4 text-center">
+                  Over the last 2 weeks, how often have you been bothered by any of the following problems?
+                </div>
+                <div className="hidden lg:flex justify-end gap-2 mb-2 text-xs font-medium text-base-content/70">
+                  <span className="w-12 text-center">Not at all</span>
+                  <span className="w-12 text-center">Several days</span>
+                  <span className="w-12 text-center">More than half</span>
+                  <span className="w-12 text-center">Nearly every day</span>
+                </div>
+                {PHQ9_ITEMS.map((q, i) => (
+                  <QuestionRow
+                    key={`phq9-${i}`}
+                    text={q}
+                    value={phq9[i]}
+                    onChange={(opt) => {
+                      const newArr = [...phq9];
+                      newArr[i] = opt;
+                      setPhq9(newArr);
+                    }}
+                    index={i}
+                    questionType="phq9"
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* GAD-7 Section */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold">GAD-7 Anxiety Scale</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold">Total: {gad7Total}/21</span>
+                  {getSeverityBadge(gad7Total, 21, 'gad7')}
+                </div>
+              </div>
+              <div className="bg-base-200 rounded-lg p-4">
+                <div className="text-xs text-base-content/70 mb-4 text-center">
+                  Over the last 2 weeks, how often have you been bothered by the following problems?
+                </div>
+                {GAD7_ITEMS.map((q, i) => (
+                  <QuestionRow
+                    key={`gad7-${i}`}
+                    text={q}
+                    value={gad7[i]}
+                    onChange={(opt) => {
+                      const newArr = [...gad7];
+                      newArr[i] = opt;
+                      setGad7(newArr);
+                    }}
+                    index={i}
+                    questionType="gad7"
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Difficulty Section */}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-3">Functional Impairment</h3>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">
+                    If you checked off any problems, how difficult have these problems made it for you to do your work, take care of things at home, or get along with other people?
+                  </span>
+                </label>
+                <select
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(e.target.value)}
+                  className="select select-bordered w-full"
+                >
+                  {DIFFICULTY_OPTIONS.map((d, i) => (
+                    <option key={i} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="card-actions justify-center">
+              <button
+                onClick={handleFormDetect}
+                disabled={loading}
+                className={`btn btn-accent btn-lg ${loading && activeMethod === 'form' ? 'loading' : ''}`}
+              >
+                {loading && activeMethod === 'form' ? (
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                ) : (
+                  <FileText className="w-5 h-5 mr-2" />
+                )}
+                Submit Assessment
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Results Section */}
-        {(result || loading) && !showHistory && (
-          <div className="card bg-base-100 shadow-xl">
+        {(result || loading) && (
+          <div className="card bg-base-100 shadow-xl mb-8">
             <div className="card-body">
               <h3 className="card-title text-xl mb-4">Results</h3>
               
@@ -794,23 +942,16 @@ const EmotionDetectPage = () => {
           </div>
         )}
 
-        {/* Back Button for History View */}
-        {showHistory && (
-          <div className="fixed bottom-6 right-6">
-            <button
-              onClick={() => {
-                setShowHistory(false);
-                setResult(null);
-              }}
-              className="btn btn-primary btn-circle btn-lg shadow-lg"
-              title="Back to Detection"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
+        {/* Emotion History - Always Visible at Bottom */}
+        <div className="mt-12">
+          <div className="divider">
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <History className="w-6 h-6" />
+              Your Emotion Journey
+            </h2>
           </div>
-        )}
+          <SimpleEmotionHistory />
+        </div>
       </div>
     </div>
   );
