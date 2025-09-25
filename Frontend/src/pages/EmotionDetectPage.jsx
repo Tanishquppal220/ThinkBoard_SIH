@@ -32,6 +32,27 @@ const DIFFICULTY_OPTIONS = [
   "Extremely difficult"
 ];
 
+// Mapping for numeric emotion codes to string emotions
+const EMOTION_CODES = {
+  0: 'neutral',
+  1: 'happy',
+  2: 'sad',
+  3: 'angry',
+  4: 'fear',
+  5: 'surprise',
+  6: 'disgust',
+  7: 'excited',
+  8: 'frustrated',
+  9: 'anxious',
+  10: 'worried',
+  11: 'depressed',
+  12: 'content',
+  13: 'calm',
+  14: 'confused',
+  15: 'tired',
+  16: 'stressed'
+};
+
 // Emoji mapping for emotions
 const EMOTION_EMOJIS = {
   'happy': '😊',
@@ -54,20 +75,41 @@ const EMOTION_EMOJIS = {
   'stressed': '😣'
 };
 
+// Helper function to normalize emotions
+const normalizeEmotion = (emotion) => {
+  if (emotion === null || emotion === undefined) {
+    return null;
+  }
+  
+  // If it's a number, convert using the emotion codes
+  if (typeof emotion === 'number') {
+    return EMOTION_CODES[emotion] || null;
+  }
+  
+  // If it's a string, return it as is (but lowercase for consistency)
+  if (typeof emotion === 'string') {
+    return emotion.toLowerCase();
+  }
+  
+  return null;
+};
+
 const getEmotionEmoji = (emotion) => {
-  if (!emotion) return '😐';
-  const normalizedEmotion = emotion.toLowerCase();
+  const normalizedEmotion = normalizeEmotion(emotion);
+  if (!normalizedEmotion) return '😐';
   return EMOTION_EMOJIS[normalizedEmotion] || '😐';
 };
 
 const getEmotionColor = (emotion) => {
-  if (!emotion) return '#94a3b8';
+  const normalizedEmotion = normalizeEmotion(emotion);
+  if (!normalizedEmotion) return '#94a3b8';
+  
   const positiveEmotions = ['happy', 'joy', 'excited', 'content', 'calm'];
   const negativeEmotions = ['sad', 'angry', 'frustrated', 'anxious', 'worried', 'depressed', 'fear'];
   
-  if (positiveEmotions.includes(emotion.toLowerCase())) {
+  if (positiveEmotions.includes(normalizedEmotion)) {
     return '#22c55e'; // green
-  } else if (negativeEmotions.includes(emotion.toLowerCase())) {
+  } else if (negativeEmotions.includes(normalizedEmotion)) {
     return '#ef4444'; // red
   }
   return '#f59e0b'; // yellow for neutral
@@ -293,9 +335,8 @@ const EmotionDetectPage = () => {
 
   // Get suggestions based on current emotion
   const getEmotionSuggestions = (emotion) => {
-    if (!emotion) return null;
-    
-    const normalizedEmotion = emotion.toLowerCase();
+    const normalizedEmotion = normalizeEmotion(emotion);
+    if (!normalizedEmotion) return null;
     
     const suggestions = {
       happy: {
@@ -411,21 +452,23 @@ const EmotionDetectPage = () => {
       
       // Check multiple date formats for the emotion data
       let emotion = dailySummary[dateStr];
-      if (!emotion) {
+      if (emotion === undefined || emotion === null) {
         const altDateStr1 = date.toLocaleDateString("en-US"); // M/D/YYYY
         const altDateStr2 = date.toLocaleDateString("en-CA"); // YYYY-MM-DD
         emotion = dailySummary[altDateStr1] || dailySummary[altDateStr2];
       }
       
-      const isPositive = emotion && ['happy', 'joy', 'excited', 'content', 'calm'].includes(emotion.toLowerCase());
-      const isNegative = emotion && ['sad', 'angry', 'frustrated', 'anxious', 'worried', 'depressed'].includes(emotion.toLowerCase());
+      // Normalize the emotion
+      const normalizedEmotion = normalizeEmotion(emotion);
+      const isPositive = normalizedEmotion && ['happy', 'joy', 'excited', 'content', 'calm'].includes(normalizedEmotion);
+      const isNegative = normalizedEmotion && ['sad', 'angry', 'frustrated', 'anxious', 'worried', 'depressed'].includes(normalizedEmotion);
       
       chartData.push({
         date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         positive: isPositive ? Math.random() * 60 + 40 : Math.random() * 20 + 10,
         negative: isNegative ? Math.random() * 60 + 40 : Math.random() * 20 + 10,
-        emotion: emotion || null,
-        hasData: !!emotion
+        emotion: normalizedEmotion || null,
+        hasData: !!normalizedEmotion
       });
     }
     
@@ -507,9 +550,9 @@ const EmotionDetectPage = () => {
 
     const weekdayMap = getWeekdayMap(historyData.daily_summary);
     const chartData = generateChartData(historyData.daily_summary);
-    const weeklyEmotion = historyData.weekly_summary ? getLatestEmotion(historyData.weekly_summary) : null;
-    const monthlyEmotion = historyData.monthly_summary ? getLatestEmotion(historyData.monthly_summary) : null;
-    const recentEmotion = getMostRecentEmotion(historyData.daily_summary);
+    const weeklyEmotion = historyData.weekly_summary ? normalizeEmotion(getLatestEmotion(historyData.weekly_summary)) : null;
+    const monthlyEmotion = historyData.monthly_summary ? normalizeEmotion(getLatestEmotion(historyData.monthly_summary)) : null;
+    const recentEmotion = normalizeEmotion(getMostRecentEmotion(historyData.daily_summary));
 
     const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -542,17 +585,52 @@ const EmotionDetectPage = () => {
           </div>
         </div>
 
+        {/* Mood History */}
+        <div className="card bg-base-100 shadow-xl">
+          <div className="card-body">
+            <h3 className="card-title text-xl mb-4 flex items-center gap-2">
+              <History className="w-5 h-5" />
+              Mood History
+            </h3>
+            
+            <div className="grid grid-cols-7 gap-4">
+              {weekdays.map((day) => {
+                const rawEmotion = weekdayMap[day];
+                const emotion = normalizeEmotion(rawEmotion);
+                const emoji = getEmotionEmoji(emotion);
+                const hasData = emotion !== null && emotion !== undefined;
+                
+                return (
+                  <div key={day} className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-colors ${
+                    hasData ? 'bg-base-200 hover:bg-base-300' : 'bg-base-100 border-2 border-dashed border-base-300'
+                  }`}>
+                    <div className={`text-3xl mb-1 ${!hasData ? 'opacity-30' : ''}`}>
+                      {hasData ? emoji : '😐'}
+                    </div>
+                    <span className="text-xs font-medium text-base-content/70">{day.slice(0, 3)}</span>
+                    <span className={`text-xs text-center capitalize px-2 py-1 rounded-full text-base-content/80 ${
+                      hasData ? 'bg-base-100' : 'bg-base-200 text-base-content/50'
+                    }`}>
+                      {hasData ? emotion : 'No data'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
         {/* Personalized Suggestions */}
         {recentEmotion && (
-          <div className={`card bg-gradient-to-r ${getEmotionSuggestions(recentEmotion).color} shadow-xl`}>
+          <div className={`card bg-gradient-to-r ${getEmotionSuggestions(recentEmotion)?.color} shadow-xl`}>
             <div className="card-body">
               <h3 className="card-title text-xl mb-4 flex items-center gap-2">
                 <span className="text-2xl">{getEmotionEmoji(recentEmotion)}</span>
-                {getEmotionSuggestions(recentEmotion).title}
+                {getEmotionSuggestions(recentEmotion)?.title}
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {getEmotionSuggestions(recentEmotion).items.map((item, index) => (
+                {getEmotionSuggestions(recentEmotion)?.items.map((item, index) => (
                   <div key={index} className="flex items-start gap-3 p-3 bg-white/50 rounded-lg hover:bg-white/70 transition-colors cursor-pointer">
                     <div className="text-2xl">{item.icon}</div>
                     <div>
@@ -622,40 +700,6 @@ const EmotionDetectPage = () => {
             <div className="flex justify-between text-sm text-base-content/50 border-t pt-4">
               <span>{chartData[0]?.date}</span>
               <span>{chartData[chartData.length - 1]?.date}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Mood History */}
-        <div className="card bg-base-100 shadow-xl">
-          <div className="card-body">
-            <h3 className="card-title text-xl mb-4 flex items-center gap-2">
-              <History className="w-5 h-5" />
-              Mood History
-            </h3>
-            
-            <div className="grid grid-cols-7 gap-4">
-              {weekdays.map((day) => {
-                const emotion = weekdayMap[day];
-                const emoji = getEmotionEmoji(emotion);
-                const hasData = emotion !== null && emotion !== undefined;
-                
-                return (
-                  <div key={day} className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-colors ${
-                    hasData ? 'bg-base-200 hover:bg-base-300' : 'bg-base-100 border-2 border-dashed border-base-300'
-                  }`}>
-                    <div className={`text-3xl mb-1 ${!hasData ? 'opacity-30' : ''}`}>
-                      {hasData ? emoji : '😐'}
-                    </div>
-                    <span className="text-xs font-medium text-base-content/70">{day.slice(0, 3)}</span>
-                    <span className={`text-xs text-center capitalize px-2 py-1 rounded-full text-base-content/80 ${
-                      hasData ? 'bg-base-100' : 'bg-base-200 text-base-content/50'
-                    }`}>
-                      {hasData ? emotion : 'No data'}
-                    </span>
-                  </div>
-                );
-              })}
             </div>
           </div>
         </div>

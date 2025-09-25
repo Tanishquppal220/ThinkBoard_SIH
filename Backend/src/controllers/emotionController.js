@@ -4,6 +4,8 @@ import FormData from "form-data";
 import fs from 'fs';
 import cloudinary from '../config/cloudinary.js';
 import multer from 'multer';
+import moment from 'moment';
+import _ from 'lodash';
 
 
 
@@ -119,18 +121,72 @@ export const detectEmotionForm = async (req, res) => {
 
 export const getEmotionHistory = async (req, res) => {
   try {
-    const userId = req.params.userId || req.body.userId || req.userId;
+    const userId = req.params.userId;
 
-    if (!userId) return res.status(400).json({ error: "User ID is required" });
+    const user = await userModel.findById(userId);
+    const history = user?.emotionHistory || [];
 
-    const response = await axios.get(
-      process.env.PYTHON_API + `/emotion-history/${userId}`
+    if (history.length === 0) {
+      return res.json({
+        user_id: userId,
+        message: "No emotion data available."
+      });
+    }
+
+    const cutoff = moment().subtract(30, 'days');
+    const recentHistory = history.filter(entry =>
+      moment(entry.timestamp).isAfter(cutoff)
     );
 
-    res.json(response.data);
+    if (recentHistory.length === 0) {
+      return res.json({
+        user_id: userId,
+        message: "No emotion data available in the last 30 days."
+      });
+    }
+
+    // --- DAILY SUMMARY ---
+    const dailyGroups = _.groupBy(recentHistory, entry =>
+      moment(entry.timestamp).format('YYYY-MM-DD')
+    );
+    const daily_summary = _.mapValues(dailyGroups, entries =>
+      _.head(_.orderBy(_.countBy(entries, 'emotion'), null, 'desc'))
+    );
+
+    // --- WEEKLY SUMMARY ---
+    const weeklyGroups = _.groupBy(recentHistory, entry =>
+      `${moment(entry.timestamp).isoWeekYear()}-W${moment(entry.timestamp).isoWeek()}`
+    );
+    const weekly_summary = _.mapValues(weeklyGroups, entries =>
+      _.head(_.orderBy(_.countBy(entries, 'emotion'), null, 'desc'))
+    );
+
+    // --- MONTHLY SUMMARY ---
+    const monthlyGroups = _.groupBy(recentHistory, entry =>
+      moment(entry.timestamp).format('YYYY-MM')
+    );
+    const monthly_summary = _.mapValues(monthlyGroups, entries =>
+      _.head(_.orderBy(_.countBy(entries, 'emotion'), null, 'desc'))
+    );
+
+    // --- TOP EMOTIONS ---
+    const emotionCounts = _.countBy(recentHistory, 'emotion');
+    const top_emotions_last_30_days = Object.entries(emotionCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2);
+
+    res.json({
+      user_id: userId,
+      daily_summary,
+      weekly_summary,
+      monthly_summary,
+      top_emotions_last_30_days,
+      total_entries_analyzed: recentHistory.length
+    });
+
   } catch (error) {
-    console.error("Error fetching emotion history:", error.message);
-    res.status(500).json({ error: "Failed to fetch emotion history" });
+    console.error("Error generating emotion summary:", error.message);
+    res.status(500).json({ error: "Failed to generate emotion summary" });
   }
 };
 

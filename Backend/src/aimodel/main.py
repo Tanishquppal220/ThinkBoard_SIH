@@ -62,6 +62,7 @@ def detect_emotion_camera(req: CameraRequest):
         "source": "camera"
     }
     user_emotion_history.setdefault(user_id, []).append(entry)
+    print(user_emotion_history)
 
     return {"user_id": user_id, "detected_emotion": detected_emotion, "history": user_emotion_history[user_id]}
 
@@ -214,6 +215,7 @@ def get_emotion_history(user_id: str):
     # --- TOP EMOTIONS (last 30 days overall) ---
     emotion_counts = Counter(entry["emotion"] for entry in recent_history)
     top_emotions = emotion_counts.most_common(2)
+    
 
     return {
         "user_id": user_id,
@@ -223,3 +225,4 @@ def get_emotion_history(user_id: str):
         "top_emotions_last_30_days": top_emotions,
         "total_entries_analyzed": len(recent_history)
     }
+
