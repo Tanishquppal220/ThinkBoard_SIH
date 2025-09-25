@@ -1,5 +1,6 @@
 import React, { useContext, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { GoogleLogin } from "@react-oauth/google"
 
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -18,6 +19,7 @@ const LoginPage = () => {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
 
     const onSubmithandler = async(e) => {
             e.preventDefault();
@@ -35,7 +37,7 @@ const LoginPage = () => {
 
                     toast.success('Account created successfully!')
                 }else{
-                    // toast.error(data.message)
+                    toast.error(data.message || 'Registration failed')
                     console.log(data.message)
                 }
             }else{
@@ -47,7 +49,7 @@ const LoginPage = () => {
                     navigate('/')
                     toast.success('Logged in successfully!')
                 }else{
-                    // toast.error(data.message)
+                    toast.error(data.message || 'Login failed')
                     console.log(data.message)
                 }
             }
@@ -64,12 +66,50 @@ const LoginPage = () => {
         }
     }
 
+    const handleGoogleLogin = async (credentialResponse) => {
+        setGoogleLoading(true);
+        try {
+            console.log(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+            axios.defaults.withCredentials = true;
+            const {data} = await axios.post(backendUrl + '/api/auth/google-login', {
+                credential: credentialResponse.credential
+            });
+            
+            if (data.success) {
+                setIsLoggedin(true)
+                await getUserData()
+                useSocketStore.getState().connectSocket(data.userId);
+                navigate('/')
+                toast.success('Google login successful!')
+            } else {
+                toast.error(data.message || 'Google authentication failed')
+                console.error("Google Auth Failed:", data.message);
+            }
+        } catch (error) {
+            if (error.response && error.response.data && error.response.data.message) {
+                toast.error(error.response.data.message);
+                console.log(error.response.data.message)
+            } else {
+                toast.error('Google authentication failed');
+                console.error("Error during Google login:", error);
+            }
+        } finally {
+            setGoogleLoading(false);
+        }
+    };
+
+    const handleGoogleError = () => {
+        toast.error('Google login failed')
+        console.error("Google Login Failed");
+    };
+
     return (
         <div className='min-h-screen bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center px-4 sm:px-6'>
             {/* Home Button */}
             <button 
                 onClick={() => navigate('/')} 
                 className='btn btn-ghost btn-circle absolute left-3 sm:left-5 lg:left-20 top-3 sm:top-5 hover:scale-110 transition-transform duration-300 z-10'
+                disabled={loading || googleLoading}
             >
                 <Home className='w-6 h-6 sm:w-8 sm:h-8' />
             </button>
@@ -87,6 +127,34 @@ const LoginPage = () => {
                         </p>
                     </div>
 
+                    {/* Google Login Button */}
+                    <div className='mb-4 sm:mb-6'>
+                        <div className='w-full flex justify-center'>
+                            {googleLoading ? (
+                                <div className='btn btn-outline w-full flex items-center gap-2 cursor-not-allowed opacity-60'>
+                                    <LoaderIcon className="animate-spin w-4 h-4 sm:w-5 sm:h-5" />
+                                    <span className='text-sm sm:text-base'>Authenticating...</span>
+                                </div>
+                            ) : (
+                                <div className='w-full [&>div]:w-full [&>div>div]:w-full [&_button]:w-full [&_button]:h-12 [&_button]:rounded-lg [&_button]:border-base-content/20 [&_button]:hover:border-primary/50 [&_button]:transition-colors [&_button]:duration-200'>
+                                    <GoogleLogin
+                                        onSuccess={handleGoogleLogin}
+                                        onError={handleGoogleError}
+                                        useOneTap={false}
+                                        text={state === 'Sign Up' ? 'signup_with' : 'signin_with'}
+                                        shape="rectangular"
+                                        theme="outline"
+                                        size="large"
+                                        width="100%"
+                                    />
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* Divider */}
+                        <div className='divider text-base-content/50 text-xs sm:text-sm my-4 sm:my-6'>OR</div>
+                    </div>
+
                     {/* Form */}
                     <form onSubmit={onSubmithandler} className='space-y-3 sm:space-y-4'>
                         {/* Name Field - Only for Sign Up */}
@@ -100,7 +168,8 @@ const LoginPage = () => {
                                         placeholder='Full Name'
                                         value={name}
                                         onChange={e => setName(e.target.value)}
-                                        required 
+                                        required
+                                        disabled={loading || googleLoading}
                                     />
                                 </label>
                             </div>
@@ -116,7 +185,8 @@ const LoginPage = () => {
                                     placeholder='Email Address'
                                     value={email}
                                     onChange={e => setEmail(e.target.value)}
-                                    required 
+                                    required
+                                    disabled={loading || googleLoading}
                                 />
                             </label>
                         </div>
@@ -131,7 +201,8 @@ const LoginPage = () => {
                                     placeholder='Password'
                                     value={password}
                                     onChange={e => setPassword(e.target.value)}
-                                    required 
+                                    required
+                                    disabled={loading || googleLoading}
                                 />
                             </label>
                         </div>
@@ -142,7 +213,8 @@ const LoginPage = () => {
                                 <button 
                                     type="button"
                                     onClick={() => navigate('/reset-password')} 
-                                    className='link link-primary text-xs sm:text-sm hover:link-hover'
+                                    className='link link-primary text-xs sm:text-sm hover:link-hover disabled:opacity-50 disabled:cursor-not-allowed'
+                                    disabled={loading || googleLoading}
                                 >
                                     Forgot password?
                                 </button>
@@ -154,7 +226,7 @@ const LoginPage = () => {
                             <button 
                                 type="submit"
                                 className='btn btn-primary w-full text-base sm:text-lg font-medium hover:scale-105 transition-transform duration-200 h-12 sm:h-auto' 
-                                disabled={loading}
+                                disabled={loading || googleLoading}
                             >
                                 {loading ? (
                                     <div className='flex items-center gap-2'>
@@ -173,8 +245,8 @@ const LoginPage = () => {
                         <p className='text-base-content/70 text-xs sm:text-sm'>
                             {state === 'Sign Up' ? 'Already have an account? ' : "Don't have an account? "}
                             <button 
-                                onClick={() => !loading && setState(state === 'Sign Up' ? 'Login' : 'Sign Up')}
-                                disabled={loading}
+                                onClick={() => !loading && !googleLoading && setState(state === 'Sign Up' ? 'Login' : 'Sign Up')}
+                                disabled={loading || googleLoading}
                                 className='link link-primary font-medium hover:link-hover disabled:opacity-50 disabled:cursor-not-allowed'
                                 >
                                 {state === 'Sign Up' ? "Login here" : "Sign Up"}

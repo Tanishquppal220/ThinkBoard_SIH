@@ -4,8 +4,6 @@ from pydantic import BaseModel
 import cv2
 import numpy as np
 import librosa
-import requests
-from io import BytesIO
 from collections import Counter
 from datetime import datetime, timedelta
 from fastapi import Form, File, UploadFile

@@ -1,5 +1,5 @@
 import express from "express";
-import { isAuthenticated, login, logout, register, resetPassword, sendResetOtp, sendverifyOtp, updateLocation, verifyEmail } from "../controllers/authController.js";
+import { googleLogin, isAuthenticated, login, logout, register, resetPassword, sendResetOtp, sendverifyOtp, updateLocation, verifyEmail } from "../controllers/authController.js";
 import userAuth from "../middleware/userAuth.js";
 
 const authRoutes = express.Router()
@@ -13,6 +13,7 @@ authRoutes.get('/is-auth', userAuth, isAuthenticated);
 authRoutes.post('/send-reset-otp',sendResetOtp);
 authRoutes.post('/reset-password',resetPassword);
 authRoutes.post('/location',userAuth,  updateLocation);
+authRoutes.post('/google-login', googleLogin);
 
 
 

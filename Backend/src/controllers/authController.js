@@ -3,6 +3,8 @@ import { generateToken } from "../config/generateToken.js";
 import transporter from "../config/nodemailer.js";
 import userModel from "../models/userModel.js";
 import bcrypt from 'bcryptjs';
+import { OAuth2Client } from "google-auth-library";
+
 
 
 export const register = async(req,res)=>{
@@ -266,4 +268,70 @@ export const updateLocation = async(req,res)=>{
         res.status(500).json({success: false, message: error.message});
         
     }
+}
+
+export const googleLogin = async (req,res)=>{
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    try {
+        const { credential } = req.body;
+        if(!credential){
+            return res.status(400).json({ success: false, message: "Missing Google credential" });
+        }
+        const ticket = await client.verifyIdToken({
+            idToken: credential,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        const { sub: googleId, email, name, picture } = payload;
+
+         let user = await userModel.findOne({ email });
+
+        if (user) {
+        // Link Google account if not already linked
+        if (!user.googleId) {
+            user.googleId = googleId;
+            if (!user.profilePic && picture) user.profilePic = picture;
+            await user.save();
+        }
+        } else {
+        // Create new Google user
+        user = new userModel({
+            name,
+            email,
+            password: "", // Google users don’t need password
+            googleId,
+            isAccountVerified: true,
+            profilePic: picture,
+        });
+        await user.save();
+        }
+
+        const token = generateToken(user._id);
+
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        return res.json({
+            success: true,
+            message: "Google login successful",
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                profilePic: user.profilePic,
+            },
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ success: false, message: "Google login failed" });
+        
+    }
+
+
 }
