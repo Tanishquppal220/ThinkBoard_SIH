@@ -10,11 +10,13 @@ import SettingPage from './pages/SettingPage';
 import { useThemeStore } from './lib/useTheme';
 import ProfilePicUpdate from './components/ProfilePicUpdate';
 import ChatHomePage from './pages/ChatHomePage';
-import HomePage from './pages/HomePage';
 import CallPage from './pages/CallPage';
 import IncomingCall from './components/IncomingCall';
 import LocationPage from './pages/LocationPage';
 import EmotionDetectPage from './pages/EmotionDetectPage';
+import MusicPage from './pages/MusicPage';
+import HomePage from './pages/HomePage';
+import BreathingPage from './pages/BreathingPage';
 
 
 const App = () => {
@@ -39,6 +41,10 @@ const App = () => {
         <Route path = '/call/:callId' element= {<CallPage/>}/>
         <Route path = '/location' element = {<LocationPage/>}/>
         <Route path = '/detect-emotion' element= {<EmotionDetectPage/>}/>
+        <Route path = '/music' element= {<MusicPage/>}/>
+        {/* <Route path = '/home2' element= {<HomePage2/>}/> */}
+        <Route path = '/breath' element= {<BreathingPage/>}/>
+        
         
         
 

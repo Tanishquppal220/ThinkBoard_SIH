@@ -25,7 +25,14 @@ const userSchema = new mongoose.Schema({
     gad7_score: { type: Number, default: null },
     timestamp: { type: Date, default: Date.now }
   }
-]
+],
+spotify: {
+    accessToken: { type: String, default: null },
+    refreshToken: { type: String, default: null },
+    expiresAt: { type: Number, default: 0 },
+    connectedAt: { type: Date, default: null }
+  }
+
 
 });
 

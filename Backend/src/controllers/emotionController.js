@@ -190,3 +190,176 @@ export const getEmotionHistory = async (req, res) => {
   }
 };
 
+export const getSpotifyToken = async (req,res)=>{
+  try {
+    const clientId = process.env.SPOTIFY_CLIENT_ID;
+    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+
+    const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+    const response = await axios.post(
+      'https://accounts.spotify.com/api/token',
+      'grant_type=client_credentials',
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${authHeader}`
+        }
+      }
+    );
+
+    res.json({ access_token: response.data.access_token });
+
+
+  } catch (err) {
+    console.error("Spotify token error:", err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to get token' });
+  }
+}
+
+export const searchSpotifyTracks = async (req, res) => {
+  try {
+    const { query, limit = 15 } = req.query;
+
+    const clientId = process.env.SPOTIFY_CLIENT_ID;
+    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+    const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+    const tokenRes = await axios.post(
+      'https://accounts.spotify.com/api/token',
+      'grant_type=client_credentials',
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${authHeader}`
+        }
+      }
+    );
+
+    const token = tokenRes.data.access_token;
+
+    const searchRes = await axios.get('https://api.spotify.com/v1/search', {
+      headers: { Authorization: `Bearer ${token}` },
+      params: {
+        q: query,
+        type: 'track',
+        limit,
+        market: 'US'
+      }
+    });
+
+    const tracks = searchRes.data.tracks.items.map(track => ({
+      id: track.id,
+      title: track.name,
+      artist: track.artists.map(a => a.name).join(', '),
+      duration: Math.floor(track.duration_ms / 1000),
+      image: track.album.images[0]?.url || '',
+      audio: track.preview_url,
+      spotifyUrl: track.external_urls.spotify,
+      popularity: track.popularity
+    }));
+
+    res.json({ tracks });
+  } catch (err) {
+    console.error('Spotify search error:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to search tracks' });
+  }
+};
+
+export const getSpotifyRecommendations = async (req, res) => {
+  try {
+    const { seedGenres, limit = 15, ...targetAudioFeatures } = req.query;
+
+    const clientId = process.env.SPOTIFY_CLIENT_ID;
+    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+    const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+    const tokenRes = await axios.post(
+      'https://accounts.spotify.com/api/token',
+      'grant_type=client_credentials',
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${authHeader}`
+        }
+      }
+    );
+
+    const token = tokenRes.data.access_token;
+
+    const params = {
+      seed_genres: seedGenres.split(',').slice(0, 5).join(','),
+      limit,
+      market: 'US',
+      ...targetAudioFeatures
+    };
+
+    const recRes = await axios.get('https://api.spotify.com/v1/recommendations', {
+      headers: { Authorization: `Bearer ${token}` },
+      params
+    });
+
+    const tracks = recRes.data.tracks.map(track => ({
+      id: track.id,
+      title: track.name,
+      artist: track.artists.map(a => a.name).join(', '),
+      duration: Math.floor(track.duration_ms / 1000),
+      image: track.album.images[0]?.url || '',
+      audio: track.preview_url,
+      spotifyUrl: track.external_urls.spotify,
+      popularity: track.popularity
+    }));
+
+    res.json({ tracks });
+  } catch (err) {
+    console.error('Spotify recommendation error:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to get recommendations' });
+  }
+};
+
+export const getAvailableGenres = async (req, res) => {
+  try {
+    const clientId = process.env.SPOTIFY_CLIENT_ID;
+    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+    const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+
+    const tokenRes = await axios.post(
+      'https://accounts.spotify.com/api/token',
+      'grant_type=client_credentials',
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${authHeader}`
+        }
+      }
+    );
+
+    const token = tokenRes.data.access_token;
+    console.log("token:", token);
+
+    const genreRes = await axios.get(
+      'https://api.spotify.com/v1/recommendations/available-genre-seeds',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    // Defensive check
+    if (!genreRes.data || !genreRes.data.genres) {
+      console.warn("Spotify returned no genres:", genreRes.data);
+      return res.status(404).json({ error: 'No genres found from Spotify' });
+    }
+
+    res.json({ genres: genreRes.data.genres });
+  } catch (error) {
+    console.error('Spotify genre error:', error.response?.data || error.message);
+    res.status(500).json({
+      error: 'Failed to fetch genres',
+      details: error.response?.data || error.message
+    });
+  }
+};
+
+

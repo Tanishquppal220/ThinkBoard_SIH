@@ -1,177 +1,176 @@
-import React, {useContext, useEffect, useState} from 'react'
-import { Link, useNavigate, useLocation } from 'react-router'
-import {PlusIcon, User, LoaderIcon, LogOut, Settings, Camera} from 'lucide-react'
-import { AppContent } from '../context/AppContext'
-import axios from 'axios'
-import toast from 'react-hot-toast'
+import React, { useContext, useEffect, useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router';
+import { PlusIcon, User, LoaderIcon, LogOut, Settings, Camera, Menu, Bell } from 'lucide-react';
+import { AppContent } from '../context/AppContext';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 import api from "../lib/axios";
-import { useSocketStore } from '../store/useSocketStore'
-
+import { useSocketStore } from '../store/useSocketStore';
 
 const Navbar = () => {
-
-  const {userData, backendUrl, setUserData, setIsLoggedin} = useContext(AppContent);
-  const [loading,setLoading] = useState(false);
-  const [logoutLoading,setLogoutLoading] = useState(false);
-  const [uploading,setUploading] = useState(false);
+  const { userData, backendUrl, setUserData, setIsLoggedin, setIsMobileSidebarOpen } = useContext(AppContent);
+  const [loading, setLoading] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
 
   const navigate = useNavigate();
-  const location = useLocation(); // Add this to get current route
+  const location = useLocation();
+  const isNotePage = location.pathname === '/note';
 
-  const sendVerificationOtp = async ()=>{
-    setLoading(true);
-    try {
-        axios.defaults.withCredentials = true;
-        const {data} = await axios.post(backendUrl + '/api/auth/send-verify-otp')
-
-        if(data.success){
-          navigate('/email-verify')
-          toast.success(data.message)
-        }else{
-          toast.error(data.message)
-        }
-      } catch (error) {
-        toast.error(error.message)
-      }finally{
-        setLoading(false);
-      }
-
-}
-
-useEffect(() => {
+  useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const res = await api.get("/api/user/data"); // adjust endpoint
-        // console.log("API Response:", res.data);
+        const res = await api.get("/api/user/data");
         if (res.data.success) {
-          setImageUrl(res.data.userData.profilePic); // Cloudinary URL stored in DB
+          setImageUrl(res.data.userData.profilePic);
         }
       } catch (err) {
         console.error("Failed to fetch user:", err);
       }
     };
-
     fetchUserData();
   }, []);
 
-
-const handleUpload = async (e) => {
-    setUploading(true);
-    const file = e.target.files[0];
-    console.log(file);
+  const sendVerificationOtp = async () => {
+    setLoading(true);
     try {
-         if (!file) return alert("Please select a file!");
-
-    const formData = new FormData();
-    formData.append("profilePic", file);
-
-    const res = await api.put("/api/user/update-profile-pic", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-
-    if (res.data.success) {
-      setImageUrl(res.data.profilePic); // Cloudinary URL
-    }
+      axios.defaults.withCredentials = true;
+      const { data } = await axios.post(backendUrl + '/api/auth/send-verify-otp');
+      if (data.success) {
+        navigate('/email-verify');
+        toast.success(data.message);
+      } else {
+        toast.error(data.message);
+      }
     } catch (error) {
-        console.error("Error uploading file:", error);
-        
-    } finally{
-      setUploading(false);
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
     }
-   
   };
 
-const logout = async ()=>{
-  setLogoutLoading(true);
-  try {
-    axios.defaults.withCredentials = true;
-    const {data} = await axios.post(backendUrl + '/api/auth/logout');
-    
+  const handleUpload = async (e) => {
+    setUploading(true);
+    const file = e.target.files[0];
+    if (!file) return alert("Please select a file!");
 
-  data.success && setIsLoggedin(false);
-  data.success &&  setUserData(false);
-  useSocketStore.getState().disconnectSocket();
+    try {
+      const formData = new FormData();
+      formData.append("profilePic", file);
+      const res = await api.put("/api/user/update-profile-pic", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (res.data.success) {
+        setImageUrl(res.data.profilePic);
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const logout = async () => {
+    setLogoutLoading(true);
+    try {
+      axios.defaults.withCredentials = true;
+      const { data } = await axios.post(backendUrl + '/api/auth/logout');
+      if (data.success) {
+        setIsLoggedin(false);
+        setUserData(false);
+        useSocketStore.getState().disconnectSocket();
+        navigate('/');
+        window.location.reload();
+      }
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setLogoutLoading(false);
+    }
+  };
+
+  const location1 = useLocation();
+  const isHome = location1.pathname === '/';
 
 
-  navigate('/')
-  window.location.reload();
-  } catch (error) {
-    toast.error(error.message);  
-  } finally{
-    setLogoutLoading(false);
-  }
-}
-
-  // Check if current route is /note (NoteHomePage)
-  const isNotePage = location.pathname === '/note';
 
   return (
-    <header className='bg-base-300 border-b border-base-content/10 mb-11 fixed top-0 left-0 w-full z-[1000]'>
-      <div className='p-4 mx-auto max-w-6xl flex items-center justify-between'>
-          <Link to='/' className='text-3xl font-bold text-primary tracking-tight'>ThinkBoard</Link>
-        <div className='flex items-center gap-4'>
-          {/* Only show New note button when on /note route */}
-          {isNotePage && (
-            <Link to='/create' className='btn btn-primary'>
-              <PlusIcon className='size-5'/>
-              <span>New note</span>
-            </Link>
-          )}
-          
-          {userData ? 
-          (<div className="dropdown dropdown-end">
-            <div tabIndex={0} role="button" className="avatar placeholder btn btn-ghost btn-circle  ">
-              <div className="bg-neutral text-neutral-content rounded-full w-12 h-12 flex items-center justify-center overflow-hidden">
+    <header className={`fixed top-0 right-0 bg-base-100 shadow-sm p-4 flex justify-between items-center z-[1000] ${
+        isHome ? 'left-20' : 'left-0'
+      }`}
+>
+      <div className="flex items-center space-x-4">
+        <button
+          className="btn btn-circle btn-ghost lg:hidden"
+          onClick={() => setIsMobileSidebarOpen(true)}
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+        <Link to='/' className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent cursor-pointer">
+          MindWell
+        </Link>
+        {isNotePage && (
+          <Link to="/create" className="btn btn-primary gap-2">
+            <PlusIcon className="w-4 h-4" />
+            New Note
+          </Link>
+        )}
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <div className="indicator">
+          <button className="btn btn-circle btn-ghost">
+            <Bell className="w-6 h-6" />
+          </button>
+          <span className="badge badge-error badge-xs indicator-item">3</span>
+        </div>
+
+        <Link to="/settings" className="btn btn-circle btn-ghost">
+          <Settings className="w-6 h-6" />
+        </Link>
+
+        {userData ? (
+          <div className="dropdown dropdown-end">
+            <div tabIndex={0} role="button" className="avatar btn btn-circle btn-ghost">
+              <div className="w-10 rounded-full overflow-hidden bg-primary text-primary-content flex items-center justify-center text-sm font-semibold">
                 {uploading ? (
-                  <LoaderIcon className="animate-spin size-4 text-primary" />
+                  <LoaderIcon className="animate-spin w-4 h-4" />
                 ) : imageUrl ? (
-                  <img
-                    src={imageUrl}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={imageUrl} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-sm font-medium">
-                    {userData.name[0].toUpperCase()}
-                  </span>
+                  userData.name[0].toUpperCase()
                 )}
               </div>
-
             </div>
-  
-            <ul tabIndex={0} className="dropdown-content menu bg-base-100 rounded-box z-[1] w-40 py-2 px-2 shadow-lg border border-base-300">
+
+            <ul tabIndex={0} className="dropdown-content menu bg-base-100 rounded-box w-44 p-2 shadow border border-base-300 z-[1]">
               {!userData.isAccountVerified && (
                 <li>
-                  <div onClick={sendVerificationOtp} className="hover:bg-primary hover:text-primary-content transition-colors     duration-200 rounded-lg cursor-pointer p-2">
-                    {loading ? <LoaderIcon className="animate-spin size-3 text-primary" /> : 'Verify Account'}
-                  </div>
+                  <button
+                    onClick={sendVerificationOtp}
+                    className="hover:bg-primary hover:text-primary-content transition-colors duration-200 rounded-lg p-2"
+                  >
+                    {loading ? <LoaderIcon className="animate-spin w-4 h-4" /> : 'Verify Account'}
+                  </button>
                 </li>
               )}
               <li>
-                <div 
-                  onClick={logout} 
-                  className="hover:brightness-110  transition-colors duration-200 rounded-lg cursor-pointer p-2 flex items-center"
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-2 hover:bg-error hover:text-error-content transition-colors duration-200 rounded-lg p-2"
                 >
-                  <LogOut className='size-4 text-error' />
-                  {logoutLoading ? <LoaderIcon className="animate-spin size-3 text-primary text-center" /> : 'Logout'}
-                </div>
+                  <LogOut className="w-4 h-4" />
+                  {logoutLoading ? <LoaderIcon className="animate-spin w-4 h-4" /> : 'Logout'}
+                </button>
               </li>
               <li>
-                <Link
-                  to = '/settings'
-                  className="group hover:brightness-110  transition-all duration-200 rounded-lg cursor-pointer p-2"
-                >
-                  <Settings className='size-4 text-muted group-hover:animate-spin duration' />
-                  Settings
-                </Link>
-              </li>
-              <li>
-                <div
-                  className=" hover:brightness-110  transition-all duration-200 rounded-lg cursor-pointer p-2"
+                <button
                   onClick={() => document.getElementById('avatar-upload').click()}
-                  >
-                  <Camera className='size-4 text-primary ' />
+                  className="flex items-center gap-2 hover:bg-base-200 transition-colors duration-200 rounded-lg p-2"
+                >
+                  <Camera className="w-4 h-4 text-primary" />
+                  {uploading ? <LoaderIcon className="animate-spin w-4 h-4" /> : 'Profile Pic'}
                   <input
                     type="file"
                     id="avatar-upload"
@@ -179,25 +178,20 @@ const logout = async ()=>{
                     accept="image/*"
                     onChange={handleUpload}
                     disabled={uploading}
-                  />  
-                    {uploading ? <LoaderIcon className="animate-spin size-3 text-primary" /> : 'Profile Pic'}
-                  
-
-                  
-                </div>
+                  />
+                </button>
               </li>
-
             </ul>
-          </div>)
-          : <Link to= '/login' className='btn btn-primary px-6'>
-          <User className='size-5'/>
-          <span>Login</span>
-          </Link>}
-          
-        </div>
+          </div>
+        ) : (
+          <Link to="/login" className="btn btn-primary px-6 flex items-center gap-2">
+            <User className="w-5 h-5" />
+            Login
+          </Link>
+        )}
       </div>
     </header>
-  )
-}
+  );
+};
 
-export default Navbar
+export default Navbar;
