@@ -1,5 +1,5 @@
-import React from 'react'
-import {Route,Routes} from 'react-router';
+import React, { useContext, useEffect } from 'react'
+import {Route,Routes, useNavigate} from 'react-router';
 import NoteHomePage from './pages/NoteHomePage';
 import CreatePage from './pages/CreatePage';
 import NoteDetailPage from './pages/NoteDetailPage';
@@ -17,11 +17,21 @@ import EmotionDetectPage from './pages/EmotionDetectPage';
 import MusicPage from './pages/MusicPage';
 import HomePage from './pages/HomePage';
 import BreathingPage from './pages/BreathingPage';
+import { AppContent } from './context/AppContext';
 
 
 const App = () => {
   const {theme} = useThemeStore();
+  const navigate = useNavigate();
+  const {isLoggedin, authLoading} = useContext(AppContent) 
+  useEffect(() => {
+  if (!authLoading && isLoggedin && window.location.pathname === '/login') {
+    navigate('/');
+  }
+}, [authLoading, isLoggedin]);
   return (
+    
+
     <div className="relative h-full w-full" data-theme={theme}>
 
 

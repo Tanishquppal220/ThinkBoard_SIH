@@ -27,6 +27,8 @@ const Navbar = () => {
         }
       } catch (err) {
         console.error("Failed to fetch user:", err);
+        setUserData(res.data.userData); // ✅ store user data
+        setIsLoggedin(true);
       }
     };
     fetchUserData();
@@ -82,6 +84,7 @@ const Navbar = () => {
         useSocketStore.getState().disconnectSocket();
         navigate('/');
         window.location.reload();
+        setIsLoggedin(false);
       }
     } catch (error) {
       toast.error(error.message);
