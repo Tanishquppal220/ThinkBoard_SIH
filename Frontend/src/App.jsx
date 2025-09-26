@@ -17,7 +17,7 @@ import EmotionDetectPage from './pages/EmotionDetectPage';
 import MusicPage from './pages/MusicPage';
 import HomePage from './pages/HomePage';
 import BreathingPage from './pages/BreathingPage';
-
+import AiChat from './pages/AiChat';
 
 const App = () => {
   const {theme} = useThemeStore();
@@ -44,7 +44,7 @@ const App = () => {
         <Route path = '/music' element= {<MusicPage/>}/>
         {/* <Route path = '/home2' element= {<HomePage2/>}/> */}
         <Route path = '/breath' element= {<BreathingPage/>}/>
-        
+        <Route path='/ai' element={<AiChat />} />
         
         
 

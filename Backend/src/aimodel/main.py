@@ -293,3 +293,76 @@ def phqAndGadTest(d: dict):
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
     return {"input": d, "phq_gad_result": result}
+
+
+# -------------------------------
+# AI Chat Endpoints
+# -------------------------------
+
+@app.post("/ai-chat")
+async def ai_chat_endpoint(req: AiChatRequest):
+    """
+    AI Chat endpoint that connects to Gemini API with personalization
+    """
+    try:
+        if not req.message or not req.message.strip():
+            return JSONResponse(content={"error": "Message cannot be empty"}, status_code=400)
+
+        # Use the chat_with_ai function from aiChat.py with user context
+        result = await chat_with_ai(req.message, req.user_id, req.user_context)
+
+        return {
+            "success": True,
+            "response": result["response"],
+            "user_message": req.message,
+            "user_id": req.user_id,
+            "model": result["model"],
+            "personalized": result.get("personalized", False)
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            content={"error": f"AI Chat failed: {str(e)}"},
+            status_code=500
+        )
+
+
+@app.post("/ai-chat/simple")
+async def simple_ai_chat_endpoint(req: AiChatRequest):
+    """
+    Simplified AI Chat endpoint for quick responses
+    """
+    try:
+        if not req.message or not req.message.strip():
+            return JSONResponse(content={"error": "Message cannot be empty"}, status_code=400)
+
+        # Use the simple_ai_chat function
+        response = await simple_ai_chat(req.message)
+
+        return {
+            "success": True,
+            "response": response,
+            "user_message": req.message
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            content={"error": f"Simple AI Chat failed: {str(e)}"},
+            status_code=500
+        )
+
+
+@app.get("/ai-chat/health")
+def ai_chat_health():
+    """
+    Health check endpoint for AI Chat service
+    """
+    try:
+        health_status = check_api_health()
+        return health_status
+    except Exception as e:
+        return JSONResponse(
+            content={"status": "error",
+                     "message": f"Health check failed: {str(e)}"},
+            status_code=500
+        )
