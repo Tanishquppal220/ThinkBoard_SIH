@@ -22,7 +22,8 @@ import {
   Clock,
   Loader2,
   BarChart3,
-  LoaderIcon
+  LoaderIcon,
+  Bot
   
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
@@ -457,9 +458,9 @@ React.useEffect(() => {
             <button className="btn btn-circle btn-primary">
               <Home className="w-6 h-6" />
             </button>
-            <button className="btn btn-circle btn-ghost">
-              <TrendingUp className="w-6 h-6" />
-            </button>
+            <Link to='AI' className="btn btn-circle btn-ghost">
+              <Bot className="w-8 h-8" />
+            </Link>
             <Link to='/chat' className="btn btn-circle btn-ghost">
               <MessageCircle className="w-6 h-6" />
             </Link>

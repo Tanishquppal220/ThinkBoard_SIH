@@ -18,6 +18,7 @@ import MusicPage from './pages/MusicPage';
 import HomePage from './pages/HomePage';
 import BreathingPage from './pages/BreathingPage';
 import { AppContent } from './context/AppContext';
+import AiChat from './pages/AiChat';
 
 
 const App = () => {
@@ -56,8 +57,9 @@ const App = () => {
         <Route path = '/location' element = {<LocationPage/>}/>
         <Route path = '/detect-emotion' element= {<EmotionDetectPage/>}/>
         <Route path = '/music' element= {<MusicPage/>}/>
-        {/* <Route path = '/home2' element= {<HomePage2/>}/> */}
         <Route path = '/breath' element= {<BreathingPage/>}/>
+        <Route path = '/AI' element= {<AiChat/>}/>
+
         
         
         
