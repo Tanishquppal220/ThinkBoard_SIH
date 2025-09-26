@@ -443,7 +443,7 @@ const emotionCategories = {
 };
 
 
-  const weekdayMap = getWeekdayMap(historyData?.weekly_summary)
+  const weekdayMap = getWeekdayMap(historyData?.daily_summary)
   
   console.log("Weekly weekday map:", weekdayMap);
   const chartData = generateChartData(historyData.daily_summary);
