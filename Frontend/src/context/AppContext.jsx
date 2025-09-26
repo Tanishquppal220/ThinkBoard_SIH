@@ -12,6 +12,7 @@ export const AppContextProvider = (props) => {
   const backendUrl = import.meta.env.MODE === "development"? "http://localhost:5001":'';
   const [isLoggedin, setIsLoggedin] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const {setIncomingCall} = useCallStore();
 
   // pull socket, connect, disconnect from store so there's a single socket instance
@@ -19,16 +20,22 @@ export const AppContextProvider = (props) => {
   const navigate = useNavigate();
 
   const getAuthState = async () => {
-    try {
-      const { data } = await axios.get(backendUrl + "/api/auth/is-auth");
-      if (data.success) {
-        setIsLoggedin(true);
-        await getUserData();
-      }
-    } catch (error) {
-      console.log(error);
+  setAuthLoading(true);
+  try {
+    const { data } = await axios.get(backendUrl + "/api/auth/is-auth");
+    if (data.success) {
+      setIsLoggedin(true);
+      await getUserData();
+    } else {
+      setIsLoggedin(false);
     }
-  };
+  } catch (error) {
+    console.log(error);
+    setIsLoggedin(false);
+  } finally {
+    setAuthLoading(false);
+  }
+};
 
   const getUserData = async () => {
     try {
@@ -101,6 +108,7 @@ export const AppContextProvider = (props) => {
     getUserData,
     socket, // expose socket so other hooks/components can use same instance
     updateMyLocation,
+    authLoading,
   };
 
   return (

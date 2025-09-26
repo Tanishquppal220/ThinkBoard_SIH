@@ -22,6 +22,7 @@ import {
   Clock,
   Loader2,
   BarChart3,
+  LoaderIcon
   
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
@@ -35,7 +36,7 @@ const HomePage = () => {
   const [selectedMood, setSelectedMood] = useState('');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const {setUserData, userData, backendUrl } = useContext(AppContent);
+  const {setUserData, userData, backendUrl, setIsLoggedin } = useContext(AppContent);
   const [imageUrl, setImageUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
@@ -279,15 +280,6 @@ React.useEffect(() => {
   return null;
 };
 
-const getISOWeekString = (date) => {
-  const tempDate = new Date(date.getTime());
-  tempDate.setHours(0, 0, 0, 0);
-  tempDate.setDate(tempDate.getDate() + 3 - ((tempDate.getDay() + 6) % 7));
-  const week1 = new Date(tempDate.getFullYear(), 0, 4);
-  const weekNumber = Math.ceil((((tempDate - week1) / 86400000) + ((week1.getDay() + 6) % 7) + 1) / 7);
-  return `${tempDate.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`;
-};
-
   
  const getWeekdayMap = (dailySummary = {}) => {
   const weekdayMap = {};
@@ -412,37 +404,30 @@ const getISOWeekString = (date) => {
    
   if (!historyData || !historyData.daily_summary) {
   return (
-    <div className="text-center py-10">
-      {historyLoading ? (
-        <div className="flex items-center justify-center gap-2 text-base-content/70">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Loading emotion history...</span>
+      <div className="min-h-screen bg-base-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative mb-8">
+            <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-r from-primary to-secondary opacity-20 animate-pulse"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-4">
+            MindWell
+          </h1>
+          <div className="flex items-center justify-center gap-2 opacity-60">
+            <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+            <div className="w-2 h-2 bg-secondary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+          </div>
+          <p className="mt-4 opacity-60">Loading your creative workspace...</p>
         </div>
-      ) : (
-        <div className="space-y-2">
-          <Clock className="w-6 h-6 text-base-300 mx-auto" />
-          <h3 className="text-sm font-medium text-base-content/80">No emotion data yet</h3>
-          <p className="text-xs text-base-content/60">
-            Start recording your moods to unlock insights.
-          </p>
-        </div>
-      )}
-    </div>
-  );
+      </div>
+    )
 }
 
-const emotionCategories = {
-  stress: ['anxious', 'worried', 'tense'],
-  mood: ['happy', 'joy', 'excited', 'content', 'neutral'],
-  sleep: ['tired', 'restless'],
-  productivity: ['focused', 'motivated'],
-  social: ['lonely', 'connected'],
-};
 
-
-  const weekdayMap = getWeekdayMap(historyData?.weekly_summary)
-  
-  console.log("Weekly weekday map:", weekdayMap);
+  const weekdayMap = getWeekdayMap(historyData?.daily_summary)
   const chartData = generateChartData(historyData.daily_summary);
   const weeklyEmotion = historyData.weekly_summary
   ? normalizeEmotion(getLatestEmotion(historyData.weekly_summary))
@@ -450,9 +435,6 @@ const emotionCategories = {
   const monthlyEmotion = historyData?.monthly_summary
   ? normalizeEmotion(getLatestEmotion(historyData?.monthly_summary))
   : null;
-
-  console.log("weekly_summary keys:", Object.keys(historyData?.weekly_summary || {}));
- 
   const recentEmotion = historyData?.daily_summary
   ? normalizeEmotion(getMostRecentEmotion(historyData.daily_summary))
   : null;
