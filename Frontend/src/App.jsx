@@ -19,7 +19,7 @@ import HomePage from './pages/HomePage';
 import BreathingPage from './pages/BreathingPage';
 import { AppContent } from './context/AppContext';
 import AiChat from './pages/AiChat';
-
+import VoiceRecognitionPage from './components/VoiceReco';
 
 const App = () => {
   const {theme} = useThemeStore();
@@ -59,8 +59,7 @@ const App = () => {
         <Route path = '/music' element= {<MusicPage/>}/>
         <Route path = '/breath' element= {<BreathingPage/>}/>
         <Route path = '/AI' element= {<AiChat/>}/>
-
-        
+        <Route path='/voice' element={<VoiceRecognitionPage />} />
         
         
 

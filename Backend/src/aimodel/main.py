@@ -1,3 +1,4 @@
+import shutil
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +15,7 @@ from nlpmodel import predict_emotion
 from mentalhealthmodel import depression_prediction
 from depressiontestmodel import testResult
 from aiChat import chat_with_ai, simple_ai_chat, check_api_health
+from voiceToText import speech_to_text_from_file
 
 app = FastAPI()
 
@@ -366,3 +368,13 @@ def ai_chat_health():
                      "message": f"Health check failed: {str(e)}"},
             status_code=500
         )
+
+@app.post("/voice-recognition/")
+async def voice_recognition(audio: UploadFile = File(...)):
+    # Save the uploaded file
+    with open("voice.wav", "wb") as buffer:
+        shutil.copyfileobj(audio.file, buffer)
+    recognized_text = speech_to_text_from_file("voice.wav")
+    nlp_result = predict_emotion(recognized_text)
+    print(nlp_result)
+    return nlp_result

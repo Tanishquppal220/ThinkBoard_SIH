@@ -18,7 +18,7 @@ const NoteDetailPage = () => {
     const fetchNote = async () => {
       try {
         const res = await api.get(`/api/notes/${id}`);
-        setNote(res.data);
+        setNote(res.data.note);
       } catch (error) {
         console.log("Error in fetching note", error);
         toast.error("Failed to fetch the note");
