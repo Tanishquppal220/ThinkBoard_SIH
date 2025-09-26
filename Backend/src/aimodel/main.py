@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import cv2
 import numpy as np
@@ -9,28 +10,51 @@ from datetime import datetime, timedelta
 from fastapi import Form, File, UploadFile
 from starlette.requests import Request
 import tempfile
+from nlpmodel import predict_emotion
+from mentalhealthmodel import depression_prediction
+from depressiontestmodel import testResult
+from aiChat import chat_with_ai, simple_ai_chat, check_api_health
 
 app = FastAPI()
 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000",
+                   "http://localhost:5173", "http://127.0.0.1:5173"],  # Add your frontend URLs
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # In-memory store for user emotions
 user_emotion_history = {}
 
 # -------------------------------
 # Request Schemas
 # -------------------------------
+
+
 class CameraRequest(BaseModel):
     user_id: str
+
 
 class VoiceRequest(BaseModel):
     user_id: str
     file_url: str
+
 
 class FormRequest(BaseModel):
     user_id: str
     phq9: list[int]
     gad7: list[int]
 
+class TextAnalysisRequest(BaseModel):
+    text: str
 
+class AiChatRequest(BaseModel):
+    message: str
+    user_id: str = None
+    user_context: dict = None
 # -------------------------------
 # Camera-based emotion detection
 # -------------------------------
@@ -70,12 +94,11 @@ def detect_emotion_camera(req: CameraRequest):
 # -------------------------------
 @app.post("/detect-emotion/voice")
 async def detect_emotion_voice(
-    user_id: str = Form(...), 
+    user_id: str = Form(...),
     file: UploadFile = File(...)
 ):
     if not file:
         return JSONResponse(content={"error": "No file uploaded"}, status_code=400)
-    
 
     try:
         print("Got user_id:", user_id)
@@ -114,6 +137,7 @@ async def detect_emotion_voice(
 # -------------------------------
 # Form-based emotion detection
 # -------------------------------
+
 
 @app.post("/detect-emotion/form")
 def detect_emotion_form(req: FormRequest):
@@ -190,7 +214,8 @@ def get_emotion_history(user_id: str):
     # --- WEEKLY EMOTIONS ---
     weekly = {}
     for entry in recent_history:
-        year, week, _ = datetime.fromisoformat(entry["timestamp"]).isocalendar()
+        year, week, _ = datetime.fromisoformat(
+            entry["timestamp"]).isocalendar()
         week_key = f"{year}-W{week}"
         weekly.setdefault(week_key, []).append(entry["emotion"])
 
@@ -202,7 +227,8 @@ def get_emotion_history(user_id: str):
     # --- MONTHLY EMOTIONS ---
     monthly = {}
     for entry in recent_history:
-        month_key = datetime.fromisoformat(entry["timestamp"]).strftime("%Y-%m")
+        month_key = datetime.fromisoformat(
+            entry["timestamp"]).strftime("%Y-%m")
         monthly.setdefault(month_key, []).append(entry["emotion"])
 
     monthly_summary = {
@@ -213,7 +239,6 @@ def get_emotion_history(user_id: str):
     # --- TOP EMOTIONS (last 30 days overall) ---
     emotion_counts = Counter(entry["emotion"] for entry in recent_history)
     top_emotions = emotion_counts.most_common(2)
-    
 
     return {
         "user_id": user_id,
@@ -224,3 +249,47 @@ def get_emotion_history(user_id: str):
         "total_entries_analyzed": len(recent_history)
     }
 
+
+# -------------------------------
+# NLP-based emotion detection
+# -------------------------------
+@app.post("/analyze-text-emotion")
+def analyze_text(req: TextAnalysisRequest):
+
+    text = req.text
+    if not text or text.strip() == "":
+        return JSONResponse(content={"error": "Text input is empty"}, status_code=400)
+
+    try:
+        predicted_emotions = predict_emotion(text)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    d = {
+        "input_text": text,
+        "predicted_emotions": predicted_emotions
+    }
+
+    return d
+
+# -------------------------------
+# Depression Prediction
+# -------------------------------
+@app.post("/depresion-test")
+def depresion_test(d: dict):
+    try:
+        result = depression_prediction(d)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    return {"input": d, "depression_prediction": result}
+
+
+# -------------------------------
+# PHQ-9 and GAD-7 Test Result
+# -------------------------------
+@app.post("/phq-gad-test")
+def phqAndGadTest(d: dict):
+    try:
+        result = testResult(d)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
+    return {"input": d, "phq_gad_result": result}
