@@ -601,7 +601,7 @@ React.useEffect(() => {
                     </div>
             
 
-            <div className="space-y-4 max-w-6xl mx-auto">
+            <div className="space-y-4 max-w-6xl mx-auto mt-3">
   {/* Top Row - Bar Chart */}
   <div className="w-full">
     <div className="card bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 shadow-xl border border-base-300/20">
