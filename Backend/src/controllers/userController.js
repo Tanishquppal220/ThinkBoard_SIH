@@ -50,3 +50,46 @@ export const getAllUserLocations = async (req,res) =>{
         
     }
 }
+
+// Get user context for AI interactions
+export const getUserContextForAI = async (req, res) => {
+	try {
+		const { userId } = req.params;
+
+		if (!userId) {
+			return res.json({ success: false, message: 'User ID is required' });
+		}
+
+		// Get user data with emotion history
+		const user = await userModel
+			.findById(userId)
+			.select('name emotionHistory location');
+
+		if (!user) {
+			return res.json({ success: false, message: 'User not found' });
+		}
+
+		// Get recent notes from Notes model
+		const Note = (await import('../models/notes.js')).default;
+		const recentNotes = await Note.find({ userId })
+			.sort({ createdAt: -1 })
+			.limit(5)
+			.select('title content emotions createdAt');
+
+		// Prepare context object
+		const userContext = {
+			name: user.name,
+			emotionHistory: user.emotionHistory || [],
+			recentNotes: recentNotes || [],
+			location: user.location || null,
+		};
+
+		return res.json({
+			success: true,
+			userContext,
+		});
+	} catch (error) {
+		console.error('Error getting user context for AI:', error);
+		return res.json({ success: false, message: error.message });
+	}
+};

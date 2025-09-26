@@ -1,4 +1,23 @@
 import Note from "../models/notes.js";
+import axios from 'axios';
+
+
+// Helper function to analyze emotions using the Python API
+async function analyzeTextEmotion(text) {
+	try {
+		const response = await axios.post(
+			`${process.env.PYTHON_API}/analyze-text-emotion`,
+			{
+				text: text,
+			}
+		);
+		console.log(response.data);
+		return response.data.emotions || [];
+	} catch (error) {
+		console.error('Error analyzing text emotion:', error.message);
+		return []; // Return empty array if analysis fails
+	}
+}
 
 export async function getAllNotes(req,res) {
     try{
